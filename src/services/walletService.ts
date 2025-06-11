@@ -1,19 +1,6 @@
 import { ethers } from 'ethers';
+import { IAgentRuntime, elizaLogger } from '@elizaos/core';
 import crypto from 'crypto';
-
-// Simple logger replacement
-const elizaLogger = {
-    info: (msg: string) => console.log(`ℹ️ ${msg}`),
-    warn: (msg: string) => console.warn(`⚠️ ${msg}`),
-    error: (msg: string, error?: any) => console.error(`❌ ${msg}`, error || '')
-};
-
-// Simple runtime interface replacement
-interface IAgentRuntime {
-    databaseAdapter?: {
-        db: any;
-    };
-}
 
 // Platform-specific user identification
 export interface PlatformUser {
@@ -450,10 +437,10 @@ export class WalletService {
     }
 }
 
-// Utility function to create platform user from message
-export function createPlatformUser(message: any): PlatformUser {
+// Utility function to create platform user from runtime message
+export function createPlatformUser(runtime: IAgentRuntime, message: any): PlatformUser {
     // Extract platform information from message context
-    const platform = message.platform || 'telegram';
+    const platform = message.platform || 'web';
     const platformUserId = message.userId || message.user?.id || 'default';
     const platformUsername = message.user?.username || message.username;
     const displayName = message.user?.displayName || message.user?.name;
