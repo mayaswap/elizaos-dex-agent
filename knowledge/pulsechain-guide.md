@@ -45,17 +45,17 @@ PulseChain is an Ethereum Virtual Machine (EVM) compatible blockchain created as
   - High APY potential for long-term stakers
 - **Risk**: High volatility and controversy
 
-## PulseX: The Leading DEX
+## 9mm DEX: Advanced Trading Platform
 
 ### Overview
-PulseX is the primary decentralized exchange on PulseChain, similar to Uniswap V2 but with lower fees and faster transactions.
+9mm DEX is an advanced decentralized exchange on PulseChain, offering both V2 and V3 features with concentrated liquidity, lower fees, and faster transactions.
 
 ### Key Features
-- **Automated Market Maker (AMM)**: Uses constant product formula
-- **Liquidity Pools**: Deposit tokens to earn fees
-- **Low Fees**: ~0.25% trading fee
-- **Fast Swaps**: Quick transaction confirmation
-- **Multiple Pairs**: Wide variety of trading pairs
+- **V2 & V3 Support**: Both traditional AMM pools and concentrated liquidity
+- **Advanced Liquidity Management**: Position ranges and fee tiers
+- **Multiple Fee Tiers**: 0.25%, 1%, and 2% fee options
+- **Real-time Analytics**: Advanced trading metrics and pool data
+- **Fast Swaps**: Quick transaction confirmation with optimal routing
 
 ### Popular Trading Pairs
 1. **PLS/USDC**: Main fiat gateway pair
@@ -65,23 +65,23 @@ PulseX is the primary decentralized exchange on PulseChain, similar to Uniswap V
 5. **ETH/PLS**: Cross-chain pair
 
 ### Liquidity Mining
-- **Earn PLSX**: Provide liquidity to earn PLSX rewards
-- **Fee Sharing**: LP tokens earn trading fees
-- **Compounding**: Rewards can be reinvested for higher yields
+- **Earn 9MM**: Provide liquidity to earn 9MM token rewards
+- **Fee Collection**: Concentrated liquidity positions earn trading fees
+- **Position Management**: Advanced tools for optimizing yield
 
 ## DeFi Ecosystem
 
 ### Major Protocols
-1. **PulseX**: Leading DEX for token swaps and liquidity
-2. **9MM**: Gaming and DeFi protocol
+1. **9mm DEX**: Advanced DEX with V2/V3 features for optimal trading
+2. **PulseX**: Traditional DEX platform
 3. **PulseDogecoin**: Meme token with utility
 4. **Mintra**: NFT marketplace
 5. **HEX**: Staking and yield protocol
 
 ### Yield Opportunities
-- **Liquidity Providing**: Earn fees on PulseX
+- **9mm V3 Liquidity**: Earn concentrated liquidity fees with position management
 - **HEX Staking**: Lock tokens for high APY
-- **PLSX Farming**: Provide liquidity for PLSX rewards
+- **9MM Token Farming**: Provide liquidity for 9MM rewards
 - **Cross-Protocol**: Participate in multiple DeFi protocols
 
 ## Trading Strategies
@@ -142,7 +142,7 @@ PulseX is the primary decentralized exchange on PulseChain, similar to Uniswap V
 ### First Steps
 1. **Add PLS for gas fees**
 2. **Start with small test transactions**
-3. **Familiarize with PulseX interface**
+3. **Familiarize with 9mm DEX interface**
 4. **Join community channels for support**
 5. **Monitor your first liquidity position**
 
@@ -154,14 +154,15 @@ PulseX is the primary decentralized exchange on PulseChain, similar to Uniswap V
 - **HEX**: 0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39
 - **USDC**: 0x15D38573d2feeb82e7ad5187aB8c1D52810B1f07
 
-### PulseX Contracts
-- **Router**: 0x98bf93ebf5c380C0e6Ae8e192A7e2AE08edAcc02
-- **Factory**: 0x1715a3E4A142d8b698131108995174F37aEBA10D
+### 9mm DEX Contracts
+- **V3 Smart Router**: 0xa9444246d80d6E3496C9242395213B4f22226a59
+- **V3 Factory**: 0xe50DbDC88E87a2C92984d794bcF3D1d76f619C68
+- **V3 Position Manager**: 0xCC05bf158202b4F461Ede8843d76dcd7Bbad07f2
 
 ### Important Links
 - **Official Website**: https://pulsechain.com
 - **Block Explorer**: https://scan.pulsechain.com
-- **PulseX DEX**: https://app.pulsex.com
+- **9mm DEX**: https://app.9mm.pro
 - **Documentation**: https://docs.pulsechain.com
 
 ## Best Practices

@@ -82,7 +82,7 @@ nano .env
 ```bash
 # Core DEX Configuration
 DEXSCREENER_API_KEY=your_api_key
-GRAPHQL_ENDPOINT=https://graph.pulsechain.com/subgraphs/name/pulsechain/pulsex
+GRAPHQL_ENDPOINT=https://graph.9mm.pro/subgraphs/name/pulsechain/9mm-v3-latest
 DEFAULT_WALLET_PRIVATE_KEY=your_private_key
 
 # Platform Integration
