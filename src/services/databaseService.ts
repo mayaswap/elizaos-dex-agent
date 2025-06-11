@@ -1,6 +1,16 @@
-import { IAgentRuntime, elizaLogger } from '@elizaos/core';
-import { SqliteDatabaseAdapter } from '@elizaos/adapter-sqlite';
-import { PostgresDatabaseAdapter } from '@elizaos/adapter-postgres';
+// Simple logger replacement
+const elizaLogger = {
+    info: (msg: string) => console.log(`ℹ️ ${msg}`),
+    warn: (msg: string) => console.warn(`⚠️ ${msg}`),
+    error: (msg: string, error?: any) => console.error(`❌ ${msg}`, error || '')
+};
+
+// Simple runtime interface replacement
+interface IAgentRuntime {
+    databaseAdapter?: {
+        db: any;
+    };
+}
 
 export interface TradingHistoryRecord {
     id: string;
