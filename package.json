@@ -24,11 +24,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@elizaos/core": "^0.1.7-alpha.1",
-    "@elizaos/plugin-bootstrap": "^0.1.7-alpha.1",
-    "@elizaos/plugin-node": "^0.1.7-alpha.1",
     "@ai-sdk/openai": "^0.0.66",
     "@anthropic-ai/sdk": "^0.53.0",
+    "@elizaos/adapter-postgres": "^0.25.6-alpha.1",
+    "@elizaos/adapter-sqlite": "^0.25.6-alpha.1",
+    "@elizaos/client-direct": "^0.25.9",
+    "@elizaos/client-discord": "^0.25.6-alpha.1",
+    "@elizaos/client-telegram": "^0.25.6-alpha.1",
+    "@elizaos/core": "^0.1.7-alpha.1",
+    "@elizaos/plugin-bootstrap": "^0.1.9",
+    "@elizaos/plugin-discord": "^1.0.10",
+    "@elizaos/plugin-node": "^0.1.9",
+    "@elizaos/plugin-telegram": "^1.0.2",
     "@types/node": "^24.0.0",
     "ai": "^3.4.32",
     "dotenv": "^16.5.0",
@@ -45,4 +52,4 @@
   "devDependencies": {
     "@types/uuid": "^10.0.0"
   }
-} 
+}
