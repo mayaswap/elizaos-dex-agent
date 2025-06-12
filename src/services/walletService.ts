@@ -59,9 +59,31 @@ export class WalletService {
 
     constructor(runtime: IAgentRuntime) {
         this.runtime = runtime;
-        // Use environment variable or generate a secure key
-        this.encryptionKey = process.env.WALLET_ENCRYPTION_KEY || this.generateEncryptionKey();
+        // Ensure we have a proper 32-byte (64-character hex) encryption key
+        this.encryptionKey = this.initializeEncryptionKey();
         elizaLogger.info("💼 WalletService initialized with database backend");
+    }
+
+    private initializeEncryptionKey(): string {
+        const envKey = process.env.WALLET_ENCRYPTION_KEY;
+        
+        if (envKey) {
+            // If environment key exists, validate it's proper hex format
+            if (/^[0-9a-fA-F]{64}$/.test(envKey)) {
+                elizaLogger.info("🔐 Using encryption key from environment");
+                return envKey;
+            } else {
+                // Convert any string to a proper 32-byte hex key using SHA-256
+                const hash = crypto.createHash('sha256').update(envKey).digest('hex');
+                elizaLogger.info("🔐 Generated encryption key from environment string");
+                return hash;
+            }
+        }
+        
+        // Generate a new random key
+        const newKey = this.generateEncryptionKey();
+        elizaLogger.info("🔐 Generated new random encryption key");
+        return newKey;
     }
 
     private generateEncryptionKey(): string {
