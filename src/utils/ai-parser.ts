@@ -6,9 +6,13 @@ import { POPULAR_TOKENS } from '../config/chains.js';
 // Load environment variables
 dotenv.config();
 
-// Initialize Anthropic client  
+// Initialize Anthropic client with proper environment variable handling
+const getAnthropicKey = () => {
+    return process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY; // Support both for backward compatibility
+};
+
 const client = new Anthropic({
-    apiKey: process.env.OPENAI_API_KEY, // Actually an Anthropic key based on the sk-ant- prefix
+    apiKey: getAnthropicKey(),
 });
 
 // Available tokens for validation
@@ -24,9 +28,9 @@ export class AIParser {
 
     private constructor() {
         // Check if API key is available
-        this.isEnabled = !!process.env.OPENAI_API_KEY;
+        this.isEnabled = !!getAnthropicKey();
         if (!this.isEnabled) {
-            console.log('🔧 AI parsing disabled - no API key found');
+            console.log('🔧 AI parsing disabled - no ANTHROPIC_API_KEY or OPENAI_API_KEY found');
         }
     }
 
