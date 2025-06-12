@@ -603,51 +603,62 @@ Need help? Type /help for commands! 🚀`;
 
             // Natural language understanding
             const userMessage = text.toLowerCase();
+            
+            console.log(`📝 Processing message: "${text}"`);
+            console.log(`🔍 User ID: ${userId}`);
 
             try {
                 // Intent: Create wallet
                 if (this.isCreateWalletIntent(userMessage)) {
+                    console.log('✅ Matched CREATE_WALLET intent');
                     await this.handleCreateWalletNaturally(chatId, platformUser, text);
                     return;
                 }
 
                 // Intent: Check balance (specific balance request)
                 if (this.isBalanceIntent(userMessage)) {
+                    console.log('✅ Matched BALANCE intent');
                     await this.handleBalanceNaturally(chatId, platformUser);
                     return;
                 }
 
                 // Intent: Check wallet/balance (general wallet info)
                 if (this.isWalletInfoIntent(userMessage)) {
+                    console.log('✅ Matched WALLET_INFO intent');
                     await this.handleWalletInfoNaturally(chatId, platformUser);
                     return;
                 }
 
                 // Intent: Show full address
                 if (this.isShowFullAddressIntent(userMessage)) {
+                    console.log('✅ Matched SHOW_FULL_ADDRESS intent');
                     await this.handleShowFullAddressNaturally(chatId, platformUser);
                     return;
                 }
 
                 // Intent: Token price
                 if (this.isPriceIntent(userMessage)) {
+                    console.log('✅ Matched PRICE intent');
                     await this.handlePriceNaturally(chatId, userMessage);
                     return;
                 }
 
                 // Intent: Import wallet
                 if (this.isImportWalletIntent(userMessage)) {
+                    console.log('✅ Matched IMPORT_WALLET intent');
                     await this.handleImportWalletNaturally(chatId, platformUser, text);
                     return;
                 }
 
                 // Intent: Help
                 if (this.isHelpIntent(userMessage)) {
+                    console.log('✅ Matched HELP intent');
                     await this.handleHelpNaturally(chatId);
                     return;
                 }
 
                 // General conversational response using AI
+                console.log('⚠️ No specific intent matched, using general conversation handler');
                 await this.handleGeneralConversation(chatId, text, platformUser);
 
             } catch (error) {
@@ -676,36 +687,66 @@ Need help? Type /help for commands! 🚀`;
     }
 
     private isBalanceIntent(message: string): boolean {
-        const balanceTerms = ['balance', 'how much', 'check my', 'what do i have'];
-        const checkTerms = ['check', 'show', 'see', 'what'];
+        const balancePatterns = [
+            /\bbalance\b/i,
+            /\bhow much.*?(do i have|have i got|pls|hex|usdc)\b/i,
+            /\bcheck.*?my.*?(balance|tokens|holdings)\b/i,
+            /\bwhat.*?do i have\b/i,
+            /\bshow.*?my.*?(balance|holdings|tokens)\b/i,
+            /\bmy.*?(balance|holdings)\b/i
+        ];
         
-        return balanceTerms.some(term => message.includes(term)) && 
-               (message.includes('my') || checkTerms.some(term => message.includes(term)));
+        return balancePatterns.some(pattern => pattern.test(message));
     }
 
     private isWalletInfoIntent(message: string): boolean {
-        return (message.includes('wallet') || message.includes('wallets') || 
-               message.includes('my address') || message.includes('show wallet')) &&
+        const walletInfoPatterns = [
+            /\bwhat.*?is.*?my.*?wallet\b/i,
+            /\bwhere.*?is.*?my.*?wallet\b/i,
+            /\bshow.*?my.*?wallet/i,
+            /\bmy.*?wallets?\b/i,
+            /\blist.*?wallets?\b/i,
+            /\bshow.*?wallets?\b/i,
+            /\bwallet.*?info/i,
+            /\bwallet.*?details/i
+        ];
+        
+        return walletInfoPatterns.some(pattern => pattern.test(message)) &&
                !this.isBalanceIntent(message) && // Exclude balance-specific requests
                !this.isShowFullAddressIntent(message); // Exclude full address requests
     }
 
     private isShowFullAddressIntent(message: string): boolean {
         const showAddressPatterns = [
-            'show me the address',
-            'show the address',
-            'display the address',
-            'get full address',
-            'full address',
-            'show my address',
-            'show address'
+            /\bshow.*?me.*?the.*?address\b/i,
+            /\bshow.*?the.*?address\b/i,
+            /\bdisplay.*?address\b/i,
+            /\bget.*?full.*?address\b/i,
+            /\bfull.*?address\b/i,
+            /\bshow.*?my.*?address\b/i,
+            /\bwhat.*?is.*?my.*?address\b/i,
+            /\bmy.*?wallet.*?address\b/i,
+            /\bwallet.*?address\b/i
         ];
-        return showAddressPatterns.some(pattern => message.includes(pattern));
+        return showAddressPatterns.some(pattern => pattern.test(message));
     }
 
     private isPriceIntent(message: string): boolean {
-        return message.includes('price') || message.includes('cost') || 
-               message.includes('how much') || message.includes('value');
+        const pricePatterns = [
+            /\bprice.*?of\b/i,
+            /\bwhat.*?is.*?the.*?price\b/i,
+            /\bhow.*?much.*?is\b/i,
+            /\bwhat.*?about.*?\b(pls|hex|usdc|9mm|plsx)\b/i,
+            /\b(pls|hex|usdc|9mm|plsx).*?price\b/i,
+            /\bprice.*?(pls|hex|usdc|9mm|plsx)\b/i,
+            /\bcheck.*?price\b/i,
+            /\bvalue.*?of\b/i,
+            /\bcost.*?of\b/i,
+            /\bworth\b/i,
+            /\btrading.*?at\b/i
+        ];
+        
+        return pricePatterns.some(pattern => pattern.test(message));
     }
 
     private isImportWalletIntent(message: string): boolean {
@@ -713,8 +754,18 @@ Need help? Type /help for commands! 🚀`;
     }
 
     private isHelpIntent(message: string): boolean {
-        return message.includes('help') || message.includes('what can you do') || 
-               message.includes('commands') || message.includes('how to');
+        const helpPatterns = [
+            /\bhelp\b/i,
+            /\bwhat.*?can.*?you.*?do\b/i,
+            /\bcommands?\b/i,
+            /\bhow.*?to\b/i,
+            /\bguide\b/i,
+            /\binstructions?\b/i,
+            /\bwhat.*?are.*?you.*?good.*?at\b/i,
+            /\bwhat.*?would.*?you.*?like.*?to.*?explore\b/i
+        ];
+        
+        return helpPatterns.some(pattern => pattern.test(message));
     }
 
     // Natural language handlers
@@ -950,8 +1001,8 @@ You don't have a wallet set up yet! Let me help you:
     }
 
     private async handlePriceNaturally(chatId: number, message: string): Promise<void> {
-        // Extract token from natural language - Updated to include 9mm
-        const tokenMatch = message.match(/\b(pls|hex|usdc|usdt|pulse|dai|weth|btc|eth|plsx|9mm|9\s*mm)\b/i);
+        // Extract token from natural language - Updated to include 9mm and use database
+        const tokenMatch = message.match(/\b(pls|hex|usdc|usdt|pulse|dai|weth|btc|eth|plsx|9mm|9\s*mm|plsx|hedron|icsa|phux|wbtc)\b/i);
         
         if (tokenMatch) {
             let token = tokenMatch[0].toUpperCase();
@@ -962,7 +1013,15 @@ You don't have a wallet set up yet! Let me help you:
             
             try {
                 this.bot.sendMessage(chatId, `🔍 Hold tight! Pulling live ${token} data from the blockchain...`);
-                
+
+                // First try to get token from database registry
+                let tokenInfo = null;
+                try {
+                    tokenInfo = await this.databaseService.getToken(token);
+                } catch (error) {
+                    console.log('Database token lookup failed, using fallback', error);
+                }
+
                 const priceData = await this.priceService.getTokenPrice(token);
                 
                 if (priceData.success && priceData.data) {
@@ -973,38 +1032,79 @@ You don't have a wallet set up yet! Let me help you:
                         `Looking ${price.change24h > 5 ? 'bullish' : 'steady'} today!` :
                         `Taking a ${price.change24h < -5 ? 'dip' : 'breather'} - might be a good entry!`;
                     
-                    const response = `💰 **${token} Market Update**
+                    let response = `💰 **${token} Market Update**
 
 **Price:** $${price.price} ${changeEmoji}
 **24h Move:** ${price.change24h ? price.change24h.toFixed(2) : 'N/A'}%
 **Liquidity:** $${price.liquidity ? price.liquidity.toLocaleString() : 'N/A'}
 **Volume:** $${price.volume24h ? price.volume24h.toLocaleString() : 'N/A'}
 
-💡 *Quick Analysis:* ${priceAnalysis}
+💡 *Quick Analysis:* ${priceAnalysis}`;
 
-Curious about other tokens? Just ask! I'm tracking all the hot ones:
+                    // Add token info from database if available
+                    if (tokenInfo) {
+                        response += `\n\n📋 **Token Info:**`;
+                        response += `\n• **Name:** ${tokenInfo.name}`;
+                        response += `\n• **Address:** \`${tokenInfo.address}\``;
+                        response += `\n• **Decimals:** ${tokenInfo.decimals}`;
+                    }
+
+                    response += `\n\nCurious about other tokens? Just ask! I'm tracking all the hot ones:
 • "How's HEX doing?"
 • "PLSX price check"
 • "What's moving today?"`;
 
                     this.bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
                 } else {
-                    this.bot.sendMessage(chatId, `❌ I couldn't find current ${token} price data. The token might not be available or there could be a temporary issue. Try asking about PLS, HEX, or USDC?`);
+                    // Enhanced error response with suggestions
+                    const errorResponse = `❌ I couldn't find current ${token} price data right now.
+
+**Possible reasons:**
+• Token might not be available on 9mm DEX
+• Temporary API issue
+• Network connectivity problem
+
+**Try these popular tokens:**
+• PLS, HEX, PLSX, USDC, 9MM
+
+**Or ask:** "What tokens do you track?" for the full list! 📊`;
+
+                    this.bot.sendMessage(chatId, errorResponse, { parse_mode: 'Markdown' });
                 }
             } catch (error) {
                 console.error('Price fetch error:', error);
-                this.bot.sendMessage(chatId, `❌ I had trouble getting the ${token} price. Let me try again in a moment.`);
+                
+                const errorMessage = `❌ I had trouble getting the ${token} price. 
+
+**This might be temporary - try again in a moment.**
+
+**Meanwhile, I can help with:**
+• Wallet management
+• Other token prices
+• Trading queries
+
+What else can I help you with? 🤝`;
+
+                this.bot.sendMessage(chatId, errorMessage, { parse_mode: 'Markdown' });
             }
         } else {
-            this.bot.sendMessage(chatId, `💰 I can check token prices for you! 
+            // No token found in message
+            const tokenSuggestion = `💰 **I can check token prices for you!**
 
-Try asking:
+**Popular tokens I track:**
+• PLS, HEX, PLSX, 9MM
+• USDC, USDT, DAI
+• WETH, WBTC, HEDRON
+
+**Try asking:**
 • "What's the price of PLS?"
 • "How much is HEX worth?"
 • "Show me USDC price"
-• "Check the value of PULSE"
+• "Check the value of 9MM"
 
-Which token are you interested in? 🤔`);
+**Which token are you interested in?** 🤔`;
+
+            this.bot.sendMessage(chatId, tokenSuggestion, { parse_mode: 'Markdown' });
         }
     }
 
@@ -1108,9 +1208,89 @@ Go ahead and paste your private key or seed phrase! 🔒`;
     }
 
     private async handleGeneralConversation(chatId: number, text: string, platformUser: PlatformUser): Promise<void> {
-        // Use character-based response for natural conversation
-        const response = generateCharacterResponse('telegram', text);
-        this.bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+        // Enhanced fallback responses with better context awareness
+        const lowerText = text.toLowerCase();
+        
+        // Check if user is asking about capabilities or confused
+        if (lowerText.includes('misunderstood') || lowerText.includes('confused') || 
+            lowerText.includes('what can you do') || lowerText.includes('what are you good at')) {
+            
+            const capabilitiesResponse = `🎯 **I'm your DEX Master - here's what I excel at:**
+
+💰 **Price Checking:**
+• "What's the price of HEX?"
+• "How much is PLS worth?"
+• "Price of 9MM"
+
+💼 **Wallet Management:**
+• "What is my wallet?" - Show wallet info
+• "Show me the address" - Full address
+• "Check my balance" - See all balances
+• "Create a wallet" - Generate new wallet
+
+📊 **Trading & Analytics:**
+• "Swap 100 PLS for HEX"
+• "Show trading history"
+• "Portfolio overview"
+
+🔔 **Alerts & Monitoring:**
+• "Create price alert for PLS at $0.0001"
+• "Show my watchlist"
+
+**Just ask naturally! I understand conversational language.** 
+What would you like to explore? 🚀`;
+
+            this.bot.sendMessage(chatId, capabilitiesResponse, { parse_mode: 'Markdown' });
+            return;
+        }
+        
+        // Check for wallet-related queries that might have been missed
+        if (lowerText.includes('wallet') && !this.isCreateWalletIntent(lowerText)) {
+            const walletSuggestions = `💼 **Wallet-related? I can help with:**
+
+• "What is my wallet?" - Show wallet info
+• "Show me the address" - Get full address  
+• "Check my balance" - See token balances
+• "Create another wallet" - Add new wallet
+• "Import wallet" - Connect existing wallet
+
+**Which would you like to do?** 🔧`;
+
+            this.bot.sendMessage(chatId, walletSuggestions, { parse_mode: 'Markdown' });
+            return;
+        }
+        
+        // Check for price-related queries that might have been missed
+        if (lowerText.includes('price') || lowerText.includes('token') || 
+            /\b(pls|hex|usdc|9mm|plsx)\b/i.test(lowerText)) {
+            
+            const priceSuggestions = `📊 **Price checking? Try these formats:**
+
+• "What's the price of HEX?"
+• "PLS price"
+• "How much is 9MM worth?"
+• "Price of USDC"
+
+**I track prices for 100+ tokens on PulseChain!** 
+Which token price are you interested in? 💎`;
+
+            this.bot.sendMessage(chatId, priceSuggestions, { parse_mode: 'Markdown' });
+            return;
+        }
+        
+        // Generic helpful response for unclear queries
+        const genericResponse = `🤔 **I'm not quite sure what you're looking for, but I'm here to help!**
+
+**Popular commands:**
+• "What's my wallet?" - Wallet info
+• "Check balance" - See your tokens
+• "Price of HEX" - Token prices
+• "Help" - Full command list
+
+**Or just tell me what you want to do - I understand natural language!** 
+For example: "I want to check token prices" or "Show me my wallet details" 💬`;
+
+        this.bot.sendMessage(chatId, genericResponse, { parse_mode: 'Markdown' });
     }
 
     public async start() {
