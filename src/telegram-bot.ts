@@ -51,8 +51,21 @@ class ElizaOSTelegramBot {
         this.walletService = new WalletService(runtime);
         this.priceService = new PriceService();
 
+        // Initialize database tables immediately
+        this.initializeDatabase().catch(console.error);
+
         this.setupHandlers();
         console.log('🤖 ElizaOS DEX Agent Telegram Bot started successfully!');
+    }
+
+    private async initializeDatabase(): Promise<void> {
+        try {
+            await this.databaseService.initializeDatabase();
+            await this.walletService.initializeDatabase();
+            console.log('📊 Database tables initialized successfully');
+        } catch (error) {
+            console.error('❌ Database initialization failed:', error);
+        }
     }
 
     private setupHandlers() {
