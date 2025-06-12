@@ -79,20 +79,37 @@ const priceAction: Action = {
             }
 
             // Use dedicated price API for direct USD prices
+            console.log(`📊 Fetching price for ${parsed.fromToken} at address: ${tokenAddress}`);
             const priceData = await aggregator.getTokenPrice(tokenAddress);
             
+            console.log(`💰 Raw price data:`, priceData);
             const tokenPriceUSD = priceData.priceUSD;
             
             // Format price based on value magnitude
             let formattedPrice: string;
-            if (tokenPriceUSD < 0.000001) {
+            if (tokenPriceUSD === 0) {
+                formattedPrice = '0';
+            } else if (tokenPriceUSD < 0.00000001) {
+                // For extremely small values, use exponential notation
                 formattedPrice = tokenPriceUSD.toExponential(4);
+            } else if (tokenPriceUSD < 0.00001) {
+                // For very small values, show more decimal places
+                formattedPrice = tokenPriceUSD.toFixed(10).replace(/0+$/, '').replace(/\.$/, '');
+            } else if (tokenPriceUSD < 0.0001) {
+                // For small values, show 8 decimals
+                formattedPrice = tokenPriceUSD.toFixed(8).replace(/0+$/, '').replace(/\.$/, '');
             } else if (tokenPriceUSD < 0.01) {
-                formattedPrice = tokenPriceUSD.toFixed(8);
+                // For medium-small values
+                formattedPrice = tokenPriceUSD.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
             } else if (tokenPriceUSD < 1) {
-                formattedPrice = tokenPriceUSD.toFixed(6);
-            } else {
+                // For sub-dollar values
                 formattedPrice = tokenPriceUSD.toFixed(4);
+            } else if (tokenPriceUSD < 100) {
+                // For normal prices
+                formattedPrice = tokenPriceUSD.toFixed(4);
+            } else {
+                // For large values
+                formattedPrice = tokenPriceUSD.toFixed(2);
             }
             
             // Create market cap and volume estimates for major tokens

@@ -82,9 +82,14 @@ export class NineMMAggregator {
 
       const priceData = await response.json();
       
+      console.log(`💱 Price API response for ${normalizedAddress}:`, priceData);
+      
+      // Ensure we properly parse the price string to number
+      const priceValue = priceData.price ? parseFloat(priceData.price) : 0;
+      
       return {
-        price: priceData.price,
-        priceUSD: parseFloat(priceData.price),
+        price: priceData.price || '0',
+        priceUSD: priceValue,
       };
       
     } catch (error) {
