@@ -9,6 +9,7 @@
 
 import TelegramBot from 'node-telegram-bot-api';
 import dotenv from 'dotenv';
+import { ethers } from 'ethers';
 import { WalletService, PlatformUser } from './services/walletService.js';
 import { DatabaseService } from './services/databaseService.js';
 import { PriceService } from './services/priceService.js';
@@ -604,7 +605,13 @@ Need help? Type /help for commands! 🚀`;
                     return;
                 }
 
-                // Intent: Check wallet/balance
+                // Intent: Check balance (specific balance request)
+                if (this.isBalanceIntent(userMessage)) {
+                    await this.handleBalanceNaturally(chatId, platformUser);
+                    return;
+                }
+
+                // Intent: Check wallet/balance (general wallet info)
                 if (this.isWalletInfoIntent(userMessage)) {
                     await this.handleWalletInfoNaturally(chatId, platformUser);
                     return;
@@ -656,10 +663,18 @@ Need help? Type /help for commands! 🚀`;
                walletTerms.some(term => message.includes(term));
     }
 
+    private isBalanceIntent(message: string): boolean {
+        const balanceTerms = ['balance', 'how much', 'check my', 'what do i have'];
+        const checkTerms = ['check', 'show', 'see', 'what'];
+        
+        return balanceTerms.some(term => message.includes(term)) && 
+               (message.includes('my') || checkTerms.some(term => message.includes(term)));
+    }
+
     private isWalletInfoIntent(message: string): boolean {
-        return message.includes('wallet') || message.includes('balance') || 
-               message.includes('my address') || message.includes('wallets') ||
-               message.includes('show wallet') || message.includes('check wallet');
+        return (message.includes('wallet') || message.includes('wallets') || 
+               message.includes('my address') || message.includes('show wallet')) &&
+               !this.isBalanceIntent(message); // Exclude balance-specific requests
     }
 
     private isPriceIntent(message: string): boolean {
@@ -771,6 +786,84 @@ I'll set it up with military-grade encryption and get you ready to trade on Puls
         } catch (error) {
             console.error('Wallet info error:', error);
             this.bot.sendMessage(chatId, '❌ I had trouble getting your wallet info. Let me try again in a moment.');
+        }
+    }
+
+    private async handleBalanceNaturally(chatId: number, platformUser: PlatformUser): Promise<void> {
+        try {
+            this.bot.sendMessage(chatId, '🔍 Let me check your wallet balance...');
+            
+            const activeWallet = await this.walletService.getActiveWallet(platformUser);
+            
+            if (!activeWallet) {
+                const message = `💰 **Balance Check**
+
+❌ You don't have any wallets yet!
+
+To check your balance, you need a wallet first:
+• Say "create a wallet" to get started
+• Or "import my wallet" if you have an existing one
+
+Once you have a wallet, I can show you balances for PLS, HEX, USDC, and more! 🚀`;
+
+                this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                return;
+            }
+
+            // Initialize provider for PulseChain
+            const provider = new ethers.JsonRpcProvider('https://rpc.pulsechain.com');
+            
+            try {
+                // Get native token balance (PLS)
+                const nativeBalance = await provider.getBalance(activeWallet.address);
+                const plsBalance = ethers.formatEther(nativeBalance);
+                
+                let response = `💰 **Your Wallet Balance**\n\n`;
+                response += `🔐 **Active Wallet:** ${activeWallet.name}\n`;
+                response += `📍 **Address:** \`${activeWallet.address.slice(0, 8)}...${activeWallet.address.slice(-6)}\`\n\n`;
+                response += `**💎 PulseChain Balances:**\n`;
+                response += `• **PLS:** ${parseFloat(plsBalance).toFixed(4)} PLS\n`;
+                
+                // Check a few popular tokens
+                const tokens = [
+                    { symbol: 'HEX', address: '0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39', decimals: 8 },
+                    { symbol: 'USDC', address: '0x15D38573d2feeb82e7ad5187aB8c1D52810B1f07', decimals: 6 },
+                    { symbol: 'PLSX', address: '0x95b303987a60c71504d99aa1b13b4da07b0790ab', decimals: 18 }
+                ];
+                
+                for (const token of tokens) {
+                    try {
+                        const erc20Abi = ['function balanceOf(address owner) view returns (uint256)'];
+                        const contract = new ethers.Contract(token.address, erc20Abi, provider);
+                        const balance = await contract.balanceOf!(activeWallet.address);
+                        
+                        if (balance > 0n) {
+                            const formattedBalance = ethers.formatUnits(balance, token.decimals);
+                            response += `• **${token.symbol}:** ${parseFloat(formattedBalance).toFixed(4)} ${token.symbol}\n`;
+                        } else {
+                            response += `• **${token.symbol}:** 0.0000 ${token.symbol}\n`;
+                        }
+                    } catch {
+                        response += `• **${token.symbol}:** Unable to fetch\n`;
+                    }
+                }
+                
+                response += `\n💡 **Want more details?**\n`;
+                response += `• "Show my portfolio" - Detailed breakdown\n`;
+                response += `• "Check Base balance" - Other networks\n`;
+                response += `• "What's my HEX worth?" - USD values\n\n`;
+                response += `Balance updated live from PulseChain! 📊`;
+
+                this.bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+                
+            } catch (error) {
+                console.error('Balance fetch error:', error);
+                this.bot.sendMessage(chatId, `❌ I had trouble fetching your balance from PulseChain. This might be a network issue. Would you like me to try again?`);
+            }
+            
+        } catch (error) {
+            console.error('Balance handler error:', error);
+            this.bot.sendMessage(chatId, '❌ I encountered an error checking your balance. Let me know if you need help with something else!');
         }
     }
 

@@ -9,7 +9,7 @@ import type {
 } from '@elizaos/core';
 import { parseCommand } from '../utils/parser.js';
 import { POPULAR_TOKENS, CHAIN_CONFIGS } from '../config/chains.js';
-import { WalletStorage } from '../utils/wallet-storage.js';
+import { WalletService, createPlatformUser } from '../services/walletService.js';
 
 const balanceAction: Action = {
     name: "CHECK_BALANCE",
@@ -31,7 +31,7 @@ const balanceAction: Action = {
             return false;
         }
     },
-    description: "Check token balances for wallets",
+    description: "Check token balances for wallets using the new WalletService",
     handler: async (
         runtime: IAgentRuntime,
         message: Memory,
@@ -43,44 +43,30 @@ const balanceAction: Action = {
             const userMessage = message.content?.text || "";
             const parsed = await parseCommand(userMessage);
             
-            // Get user's stored wallet address
+            // Create platform user from message context
+            const platformUser = createPlatformUser(runtime, message);
+            
+            // Initialize wallet service
+            const walletService = new WalletService(runtime);
+            
+            // Get user's active wallet address
             let walletAddress: string | null = null;
             
-            // First try to get wallet from persistent storage
             try {
-                const storage = WalletStorage.getInstance();
-                const storedWallet = storage.getWallet(message.userId);
-                if (storedWallet?.address) {
-                    walletAddress = storedWallet.address;
-                    
-                    // Also update runtime storage for performance
-                    if (runtime && message.userId) {
-                        (runtime as any).userWallets = (runtime as any).userWallets || {};
-                        (runtime as any).userWallets[message.userId] = storedWallet;
-                    }
+                const activeWallet = await walletService.getActiveWallet(platformUser);
+                if (activeWallet?.address) {
+                    walletAddress = activeWallet.address;
+                    console.log(`🔍 Found active wallet: ${walletAddress} for ${platformUser.platform}:${platformUser.platformUserId}`);
                 }
             } catch (error) {
-                console.log('Could not retrieve from persistent storage:', error);
-            }
-            
-            // If not found in persistent storage, check runtime storage
-            if (!walletAddress) {
-                try {
-                    if ((runtime as any).userWallets && message.userId) {
-                        const userWallet = (runtime as any).userWallets[message.userId];
-                        if (userWallet?.address) {
-                            walletAddress = userWallet.address;
-                        }
-                    }
-                } catch (error) {
-                    console.log('Could not retrieve from runtime storage:', error);
-                }
+                console.log('Could not retrieve wallet from WalletService:', error);
             }
             
             // Check if user provided a specific address in their message
             const addressMatch = userMessage.match(/0x[a-fA-F0-9]{40}/);
             if (addressMatch) {
                 walletAddress = addressMatch[0];
+                console.log(`🎯 Using address from message: ${walletAddress}`);
             }
             
             let responseText = "";
@@ -88,7 +74,7 @@ const balanceAction: Action = {
             if (!walletAddress) {
                 responseText = `💰 **Balance Check**
 
-I need a wallet address to check balances.
+I need a wallet to check balances.
 
 **Options:**
 • "Create a wallet for me" (I'll remember it for future balance checks)
@@ -103,16 +89,20 @@ I need a wallet address to check balances.
                         content: { text: responseText }
                     } as Content);
                 }
-                return;
+                return true;
             }
             
             // Initialize provider for PulseChain (main network for this demo)
             const provider = new ethers.JsonRpcProvider(CHAIN_CONFIGS.pulsechain.rpcUrl);
             
             try {
+                console.log(`🌐 Checking balance for wallet: ${walletAddress}`);
+                
                 // Get native token balance (PLS)
                 const nativeBalance = await provider.getBalance(walletAddress);
                 const plsBalance = ethers.formatEther(nativeBalance);
+                
+                console.log(`💰 PLS Balance: ${plsBalance}`);
                 
                 responseText = `💰 **Wallet Balance Report**
 
@@ -130,12 +120,12 @@ I need a wallet address to check balances.
                 
                 for (const tokenSymbol of tokenChecks) {
                     const tokenAddress = tokenAddresses[tokenSymbol as keyof typeof tokenAddresses];
-                    if (tokenAddress && tokenAddress !== 'NATIVE') {
+                    if (tokenAddress && tokenAddress !== 'NATIVE' && tokenAddress !== 'EeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
                         try {
                             // Standard ERC-20 ABI for balanceOf
                             const erc20Abi = ['function balanceOf(address owner) view returns (uint256)'];
                             const contract = new ethers.Contract(tokenAddress, erc20Abi, provider);
-                            const balance = await contract.balanceOf(walletAddress);
+                            const balance = await contract.balanceOf!(walletAddress);
                             
                             let formattedBalance = '0';
                             if (balance > 0n) {
@@ -146,6 +136,7 @@ I need a wallet address to check balances.
                             }
                             
                             responseText += `\n• **${tokenSymbol}:** ${parseFloat(formattedBalance).toFixed(4)} ${tokenSymbol}`;
+                            console.log(`🪙 ${tokenSymbol}: ${formattedBalance}`);
                         } catch (tokenError) {
                             console.log(`Could not fetch ${tokenSymbol} balance:`, tokenError);
                             responseText += `\n• **${tokenSymbol}:** Unable to fetch`;
@@ -179,6 +170,8 @@ Could not retrieve balance for wallet: \`${walletAddress}\`
                 } as Content);
             }
 
+            return true;
+
         } catch (error) {
             console.error('Balance action error:', error);
             const errorText = `❌ **Balance Error**
@@ -194,6 +187,8 @@ Sorry, I encountered an error while checking your balance. Please try again or:
                     content: { text: errorText }
                 } as Content);
             }
+            
+            return false;
         }
     },
     examples: [
