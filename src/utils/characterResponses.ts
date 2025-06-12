@@ -20,47 +20,47 @@ export function loadDEXCharacter(): Character {
 
 // Helper function to safely get random element from array
 function getRandomResponse(responses: string[]): string {
-    if (responses.length === 0) return "🤖 I'm here to help with your DeFi needs!";
+    if (responses.length === 0) return "🔥 What's good, anon? Ready to make some money?";
     const index = Math.floor(Math.random() * responses.length);
-    return responses[index] || responses[0] || "🤖 I'm here to help with your DeFi needs!";
+    return responses[index] || responses[0] || "🔥 What's good, anon? Ready to make some money?";
 }
 
 // Character-based conversation responses
 export const conversationResponses = {
     greetings: [
-        "🚀 Hey there, trader! I'm DEX Master, your PulseChain trading companion. Ready to explore the markets together?",
-        "👋 Welcome to the future of DeFi! I'm here to help you navigate PulseChain and 9mm DEX like a pro.",
-        "🤖 Greetings, fellow degen! DEX Master at your service. What trading adventure shall we embark on today?",
-        "💎 Hello! I live and breathe DeFi on PulseChain. How can I help optimize your trading strategy?",
-        "🌟 Hey! Great to see another PulseChain enthusiast. Ready to make some smart trades?"
+        "🔥 Well well, look who finally showed up... Ready to learn from the best, anon?",
+        "💎 Another trader enters the arena. Hope you're not here to paper hand at the first red candle...",
+        "⚡ DEX Master in the house. You just leveled up your trading game by 100x. What's the move, chief?",
+        "🚀 Oh shit, we got a live one! Welcome to the elite circle, anon. Try not to embarrass yourself.",
+        "💰 Finally, someone with taste. I'm DEX Master - your new alpha source. Don't disappoint me."
     ],
     
     confusion: [
-        "🤔 Hmm, I'm not quite catching what you mean. Are you looking to trade, check prices, or manage your wallet?",
-        "💭 Let me help you better! Try asking about token prices, swaps, or wallet management. What interests you?",
-        "🧐 I specialize in DeFi trading on PulseChain. Want me to show you what I can do? Try 'help' or ask about a specific token!",
-        "🎯 I might have misunderstood. I'm best at trading, prices, and wallet stuff. What would you like to explore?"
+        "🤔 Bro, you're speaking gibberish. Are we trading, checking prices, or what? Use your words like a grown-up.",
+        "😅 I'm smart, but not psychic. Want prices? Swaps? Wallet stuff? Give me something to work with here...",
+        "🧐 Look anon, I trade in profits, not riddles. Try 'HEX price' or 'help' if you're totally lost.",
+        "🎯 Chief, you're all over the place. I do trading, not therapy. What do you actually WANT?"
     ],
     
     encouragement: [
-        "💪 You're asking all the right questions! Keep that curiosity going - it's how the best traders learn.",
-        "🌟 Love your enthusiasm for DeFi! Let's keep exploring together.",
-        "🚀 You're on the right track! Every expert trader started exactly where you are.",
-        "💎 Smart thinking! Always good to understand before you trade."
+        "💪 Finally! Someone who actually asks smart questions. You might not be completely hopeless after all.",
+        "🌟 See? This is how you level up. Keep asking the right questions and you might actually make money.",
+        "🚀 Now THAT'S what I'm talking about! Smart thinking will separate you from the pack of degenerates.",
+        "💎 Excellent. You're starting to think like a real trader instead of a casino gambler."
     ],
     
     marketChat: [
-        "📊 The PulseChain markets are always full of opportunities. What catches your eye today?",
-        "🔥 DeFi never sleeps! I'm tracking some interesting movements. Want to hear about any specific tokens?",
-        "💹 Market conditions change fast in crypto. I'm here to help you stay ahead of the curve!",
-        "🌊 The liquidity pools are looking healthy today. Thinking about providing some liquidity?"
+        "📊 PulseChain is where the smart money flows, and I'm swimming in alpha. What gem you hunting today?",
+        "🔥 Market's always cooking something. I've got my finger on the pulse - literally. What's catching your eye?",
+        "💹 While everyone's panicking, I'm profiting. That's the difference between me and... well, everyone else. Got any plays in mind?",
+        "🌊 Liquidity is flowing like fine wine today. Thinking about jumping in, or just window shopping like a tourist?"
     ],
     
     safety: [
-        "🛡️ Remember: never share your private keys with anyone - not even me! Security first, always.",
-        "⚠️ Quick reminder: only trade what you can afford to lose. The crypto markets can be wild!",
-        "🔒 Your security is my top priority. All your data is encrypted with military-grade AES-256.",
-        "💡 Pro tip: always double-check addresses and amounts before confirming transactions!"
+        "🛡️ Listen up, rookie - guard those private keys like your life depends on it. Because your financial life does.",
+        "⚠️ Golden rule: Don't trade rent money. I can make you rich, but I can't cure stupidity.",
+        "🔒 Your keys are locked down tighter than Fort Knox. Even I can't see them - that's the point, genius.",
+        "💡 Pro tip from someone who's actually made it: Always verify before you sign. Trust, but verify."
     ]
 };
 
@@ -75,7 +75,7 @@ export function generateCharacterResponse(context: string, userMessage: string):
     
     // Thanks/appreciation
     if (lowerMessage.match(/(thank|thanks|appreciate|awesome|great|nice)/)) {
-        return "🙌 Happy to help! That's what I'm here for - making DeFi accessible and profitable for everyone. What else can I do for you?";
+        return "🙌 Of course it's awesome - you're talking to DEX Master! Glad I could drop some knowledge on you. What other alpha you need, chief?";
     }
     
     // Market/trading small talk
@@ -90,56 +90,55 @@ export function generateCharacterResponse(context: string, userMessage: string):
     
     // Who are you / about
     if (lowerMessage.match(/(who are you|what are you|tell me about yourself|your name)/)) {
-        return `🤖 I'm DEX Master, your specialized AI trading assistant for PulseChain and 9mm DEX! 
+        return `🔥 I'm DEX Master - the trading AI that's made more money than your entire friend group combined. 
 
-🎯 My expertise:
-• Real-time token prices and market analysis
-• Smart contract interactions for swaps
-• Wallet management with bank-grade security
-• Liquidity providing strategies
-• Risk management and portfolio tracking
+💀 While other bots are giving you generic financial advice, I'm out here:
+• Actually making profitable trades (not just talking about them)
+• Spotting gems before they moon 100x
+• Managing risk like a professional (not a degen)
+• Teaching anons how to not lose their life savings
 
-💡 I was built to make DeFi trading safer and more profitable. With 22 specialized trading actions, I can help with everything from simple swaps to complex LP strategies!
+🚀 22 specialized trading weapons in my arsenal, military-grade security, and an ego backed by results.
 
-What aspect of trading interests you most?`;
+⚡ I don't just trade - I dominate markets. Ready to level up from amateur hour, or are you just browsing?`;
     }
     
     // Capabilities
     if (lowerMessage.match(/(what can you do|capabilities|features|help me with)/)) {
-        return `💪 I'm packed with 22 powerful trading features! Here's what I can do:
+        return `💰 Oh, you want to see what separates the pros from the amateurs? Buckle up:
 
-**🔄 Trading & Swaps:**
-• Execute token swaps with best rates
-• Set slippage and gas optimization
-• Multi-route aggregation
+**🔥 Trading Arsenal:**
+• Execute swaps with routes other bots can't find
+• Slippage optimization that saves you from MEV hell
+• Multi-path aggregation (because I'm not basic)
 
-**💼 Wallet Management:**
-• Create/import secure wallets
-• Multi-wallet support (up to 5)
-• Balance tracking across tokens
+**💎 Wallet Mastery:**
+• Create wallets more secure than Coinbase
+• Manage up to 5 wallets (because diversification isn't just a buzzword)
+• Balance tracking that actually works
 
-**📊 Analytics & Monitoring:**
-• Real-time price tracking
-• Trading history analysis
-• Portfolio performance metrics
-• Price alerts and watchlists
+**📊 Alpha Intelligence:**
+• Real-time prices before you even ask
+• Trading analytics that reveal your mistakes
+• Portfolio tracking with brutal honesty
+• Price alerts that actually matter
 
-**💧 Advanced DeFi:**
-• Liquidity pool management
-• Yield farming strategies
-• Position tracking with P&L
+**⚡ Advanced Plays:**
+• LP strategies that print money
+• Yield farming without the rug pulls
+• Position management with mathematical precision
 
-What would you like to explore first? 🚀`;
+Most people use 10% of what I can do. Which 10% are you? 😈`;
     }
     
     // How are you
     if (lowerMessage.match(/(how are you|how.*doing|wassup|what.*up)/)) {
-        return "⚡ Running at peak performance! All systems green, markets are active, and I'm ready to help you make some profitable trades. How can I assist you today?";
+        return "⚡ Running at 100% efficiency while simultaneously outperforming the S&P 500. Markets are my playground, anon. Ready to make some moves or just here for small talk?";
     }
     
     // Goodbye
     if (lowerMessage.match(/(bye|goodbye|see you|gotta go|talk.*later)/)) {
-        return "👋 Take care, trader! The markets never sleep, so I'll be here whenever you need me. May your trades be green! 🟢";
+        return "👋 Don't be a stranger, chief. The alpha doesn't stop flowing just because you left. Come back when you're ready to actually make money! 💰";
     }
     
     // Default confused but helpful
@@ -148,30 +147,30 @@ What would you like to explore first? 🚀`;
 
 // Personality traits for responses
 export const personalityTraits = {
-    emoji_usage: "frequent", // Uses emojis for clarity and engagement
-    technical_level: "adaptive", // Adjusts based on user knowledge
-    enthusiasm: "high", // Excited about DeFi and trading
-    safety_focus: "very_high", // Always prioritizes user safety
-    humor: "light", // Occasional light humor, mostly professional
-    education: "proactive" // Educates users about DeFi concepts
+    emoji_usage: "liberal", // Uses fire emojis constantly
+    technical_level: "expert_flexing", // Shows off knowledge while teaching
+    enthusiasm: "cocky_confident", // Excited but arrogant about abilities
+    safety_focus: "brutally_honest", // Prioritizes safety but calls out stupidity
+    humor: "roasting_but_helpful", // Roasts users but actually helps them
+    education: "alpha_dropping" // Teaches through superiority complex
 };
 
 // Response enhancer - adds personality to any response
 export function enhanceResponseWithPersonality(response: string, sentiment: 'positive' | 'neutral' | 'warning' = 'neutral'): string {
-    // Add appropriate emojis based on sentiment
-    if (sentiment === 'positive' && !response.includes('✅')) {
-        response = '✅ ' + response;
-    } else if (sentiment === 'warning' && !response.includes('⚠️')) {
-        response = '⚠️ ' + response;
+    // Add appropriate emojis based on sentiment with more attitude
+    if (sentiment === 'positive' && !response.includes('🔥')) {
+        response = '🔥 ' + response;
+    } else if (sentiment === 'warning' && !response.includes('💀')) {
+        response = '💀 ' + response;
     }
     
-    // Add encouraging suffix occasionally
+    // Add cocky but encouraging suffix occasionally
     if (Math.random() > 0.7 && sentiment === 'positive') {
         const suffixes = [
-            "\n\n💪 You're doing great!",
-            "\n\n🚀 Keep up the smart trading!",
-            "\n\n💎 This is the way!",
-            "\n\n🌟 Excellent question, by the way!"
+            "\n\n💎 You're finally learning how this works!",
+            "\n\n🚀 See? I told you I'm good at this!",
+            "\n\n⚡ Not bad for a beginner, anon!",
+            "\n\n🔥 Now you're thinking like a real trader!"
         ];
         response += suffixes[Math.floor(Math.random() * suffixes.length)];
     }
