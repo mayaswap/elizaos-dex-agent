@@ -67,7 +67,9 @@ const walletV2Action: Action = {
 
 **Platform:** ${platformUser.platform.toUpperCase()}
 **Wallet Name:** ${newWallet.name}
-**Address:** \`${newWallet.address}\`
+
+📋 **Full Address (Tap to Copy):**
+${newWallet.address}
 
 ⚠️ **IMPORTANT SECURITY NOTES:**
 • Your wallet is securely encrypted and stored in the database

@@ -78,7 +78,7 @@ I need a wallet to check balances.
 
 **Options:**
 • "Create a wallet for me" (I'll remember it for future balance checks)
-• "Check balance of 0x742d35Cc6635C0532925a3b8D357376C..." 
+• "Check balance of 0x742d35Cc6635C0532925a3b8D357376C326910b2f" 
 • Import your existing wallet first
 
 **Note:** Once you create or import a wallet, I'll remember it for easy balance checking!`;
@@ -106,7 +106,9 @@ I need a wallet to check balances.
                 
                 responseText = `💰 **Wallet Balance Report**
 
-**Wallet:** \`${walletAddress}\`
+📋 **Wallet Address:**
+${walletAddress}
+
 **Network:** PulseChain
 
 **Native Balance:**
@@ -151,7 +153,8 @@ I need a wallet to check balances.
                 console.error('Balance check error:', error);
                 responseText = `❌ **Balance Check Failed**
 
-Could not retrieve balance for wallet: \`${walletAddress}\`
+📋 Could not retrieve balance for wallet:
+${walletAddress}
 
 **Possible reasons:**
 • Network connection issues

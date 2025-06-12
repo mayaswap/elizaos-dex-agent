@@ -71,9 +71,12 @@ const walletAction: Action = {
                         
                         responseText = `🎉 **New Wallet Created Successfully!**
 
-**Wallet Address:** \`${newWallet.address}\`
-**Wallet Name:** ${newWallet.name}
-**Platform:** ${newWallet.platform}
+📋 **Full Address (Tap to Copy):**
+${newWallet.address}
+
+**Wallet Details:**
+• Name: ${newWallet.name}
+• Platform: ${newWallet.platform}
 
 ⚠️ **IMPORTANT SECURITY NOTES:**
 • Your private key is encrypted with AES-256 and stored securely
@@ -122,9 +125,12 @@ To connect your existing wallet, you have a few options:
                     if (existingWallet && (lowerText.includes('my wallet') || lowerText.includes('what is my') || lowerText.includes('show my'))) {
                         responseText = `💼 **Your Active Wallet**
 
-**Wallet Address:** \`${existingWallet.address}\`
-**Wallet Name:** ${existingWallet.name}
-**Created:** ${new Date(existingWallet.createdAt).toLocaleString()}
+📋 **Full Address (Tap to Copy):**
+${existingWallet.address}
+
+**Wallet Details:**
+• Name: ${existingWallet.name}
+• Created: ${new Date(existingWallet.createdAt).toLocaleString()}
 
 🔐 **Security:** AES-256 encrypted database storage
 

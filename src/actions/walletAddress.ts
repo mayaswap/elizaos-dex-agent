@@ -64,13 +64,16 @@ const walletAddressAction: Action = {
                 if (activeWallet?.address) {
                     responseText = `💼 **Your Active Wallet Address**
 
-**Address:** \`${activeWallet.address}\`
-**Wallet Name:** ${activeWallet.name}
-**Platform:** ${activeWallet.platform}
-**Created:** ${new Date(activeWallet.createdAt).toLocaleString()}
+📋 **Full Address (Click to Copy):**
+${activeWallet.address}
+
+**Wallet Details:**
+• Name: ${activeWallet.name}
+• Platform: ${activeWallet.platform}
+• Created: ${new Date(activeWallet.createdAt).toLocaleString()}
 
 🔗 **Quick Actions:**
-• Copy the address above to receive tokens
+• Tap/click the address above to copy it
 • "Check my balance" - See all your token balances
 • "Create a new wallet" - Add another wallet
 
@@ -79,7 +82,7 @@ const walletAddressAction: Action = {
 • Base Chain  
 • Sonic Network
 
-⚡ **Pro Tip:** Use this address to receive tokens on any supported EVM network!`;
+⚡ **Pro Tip:** This same address works on all EVM networks!`;
                 } else {
                     responseText = `💼 **No Active Wallet Found**
 
