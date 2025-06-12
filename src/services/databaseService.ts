@@ -482,13 +482,19 @@ export class DatabaseService {
 
         if (!prefs) return null;
 
-        return {
-            ...prefs,
-            preferredTokens: JSON.parse(prefs.preferredTokens),
-            educationProgress: JSON.parse(prefs.educationProgress),
-            notificationSettings: JSON.parse(prefs.notificationSettings),
-            tradingHours: JSON.parse(prefs.tradingHours)
-        };
+        try {
+            return {
+                ...prefs,
+                preferredTokens: JSON.parse(prefs.preferredTokens),
+                educationProgress: JSON.parse(prefs.educationProgress),
+                notificationSettings: JSON.parse(prefs.notificationSettings),
+                tradingHours: JSON.parse(prefs.tradingHours)
+            };
+        } catch (error) {
+            elizaLogger.error(`Failed to parse user preferences for ${userPlatformId}:`, error);
+            // Return null to indicate corrupted data
+            return null;
+        }
     }
 
     // Watchlist Methods
@@ -525,11 +531,23 @@ export class DatabaseService {
             ORDER BY isDefault DESC, createdAt ASC
         `).all(userPlatformId) as any[];
 
-        return watchlists.map(w => ({
-            ...w,
-            tokenSymbols: JSON.parse(w.tokenSymbols),
-            isDefault: Boolean(w.isDefault)
-        }));
+        return watchlists.map(w => {
+            try {
+                return {
+                    ...w,
+                    tokenSymbols: JSON.parse(w.tokenSymbols),
+                    isDefault: Boolean(w.isDefault)
+                };
+            } catch (error) {
+                elizaLogger.error(`Failed to parse watchlist tokens for watchlist ${w.id}:`, error);
+                // Return with empty token list as fallback
+                return {
+                    ...w,
+                    tokenSymbols: [],
+                    isDefault: Boolean(w.isDefault)
+                };
+            }
+        });
     }
 
     // Session Management

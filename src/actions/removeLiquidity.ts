@@ -24,7 +24,7 @@ const removeLiquidityAction: Action = {
     ],
     validate: async (runtime: IAgentRuntime, message: Memory) => {
         const text = message.content.text;
-        const parsed = parseCommand(text);
+        const parsed = await parseCommand(text);
         
         return parsed.intent === 'removeLiquidity' && parsed.confidence > 0.6;
     },
@@ -37,7 +37,7 @@ const removeLiquidityAction: Action = {
         callback?: HandlerCallback
     ): Promise<boolean> => {
         const text = message.content.text;
-        const parsed = parseCommand(text);
+        const parsed = await parseCommand(text);
         
         try {
             const positionManager = new NineMmV3PositionManager();
@@ -60,11 +60,31 @@ const removeLiquidityAction: Action = {
                     return false;
                 }
 
-                // Get position analytics
-                const [feeEarnings, performance] = await Promise.all([
+                // Get position analytics with graceful error handling
+                const [feeEarningsResult, performanceResult] = await Promise.allSettled([
                     feeTracker.getFeeEarningsHistory(position.id),
                     feeTracker.getPositionPerformance(position)
                 ]);
+
+                const feeEarnings = feeEarningsResult.status === 'fulfilled' 
+                    ? feeEarningsResult.value 
+                    : { totalEarned: { usd: '0' }, earningRate: { annualizedAPY: 0 } };
+                
+                const performance = performanceResult.status === 'fulfilled'
+                    ? performanceResult.value
+                    : { 
+                        currentValue: { totalUSD: 0 },
+                        pnl: { percentageReturn: '0', annualizedReturn: '0', ilPnL: '0' },
+                        vsHodl: { outperformance: 0 }
+                    };
+
+                // Log any errors but continue execution
+                if (feeEarningsResult.status === 'rejected') {
+                    console.warn('Failed to fetch fee earnings:', feeEarningsResult.reason);
+                }
+                if (performanceResult.status === 'rejected') {
+                    console.warn('Failed to fetch performance data:', performanceResult.reason);
+                }
 
                 const token0 = position.pool.token0.symbol;
                 const token1 = position.pool.token1.symbol;

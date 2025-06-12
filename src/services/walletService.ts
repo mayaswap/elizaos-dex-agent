@@ -56,6 +56,7 @@ export interface WalletSettings {
 export class WalletService {
     private runtime: IAgentRuntime;
     private encryptionKey: string;
+    private operationLocks: Map<string, Promise<any>> = new Map(); // Prevent concurrent operations
 
     constructor(runtime: IAgentRuntime) {
         this.runtime = runtime;
@@ -194,13 +195,35 @@ export class WalletService {
                 ORDER BY createdAt ASC
             `).all(userPlatformId) as any[];
 
-            return wallets.map(wallet => ({
-                ...wallet,
-                settings: JSON.parse(wallet.settings),
-                createdAt: new Date(wallet.createdAt),
-                lastUsed: new Date(wallet.lastUsed),
-                isActive: Boolean(wallet.isActive)
-            }));
+            return wallets.map(wallet => {
+                let settings;
+                try {
+                    settings = JSON.parse(wallet.settings);
+                } catch (error) {
+                    elizaLogger.error(`Failed to parse wallet settings for wallet ${wallet.id}:`, error);
+                    // Fallback to default settings
+                    settings = {
+                        slippagePercentage: 0.5,
+                        mevProtection: true,
+                        autoSlippage: false,
+                        transactionDeadline: 20,
+                        preferredGasPrice: 'standard',
+                        notifications: {
+                            priceAlerts: true,
+                            transactionUpdates: true,
+                            portfolioChanges: false
+                        }
+                    };
+                }
+                
+                return {
+                    ...wallet,
+                    settings,
+                    createdAt: new Date(wallet.createdAt),
+                    lastUsed: new Date(wallet.lastUsed),
+                    isActive: Boolean(wallet.isActive)
+                };
+            });
         } catch (error) {
             elizaLogger.error("Error retrieving user wallets:", error);
             return [];
@@ -216,7 +239,7 @@ export class WalletService {
     }
 
     /**
-     * Switch active wallet
+     * Switch active wallet with database transaction for data consistency and race condition protection
      */
     async switchWallet(platformUser: PlatformUser, walletId: string): Promise<boolean> {
         const userPlatformId = this.createUserPlatformId(platformUser.platform, platformUser.platformUserId);
@@ -226,30 +249,72 @@ export class WalletService {
             return false;
         }
 
-        try {
-            // Deactivate all wallets for this user
-            await this.runtime.databaseAdapter.db.prepare(`
-                UPDATE wallets 
-                SET isActive = 0 
-                WHERE userPlatformId = ?
-            `).run(userPlatformId);
-
-            // Activate the selected wallet
-            const result = await this.runtime.databaseAdapter.db.prepare(`
-                UPDATE wallets 
-                SET isActive = 1, lastUsed = ? 
-                WHERE id = ? AND userPlatformId = ?
-            `).run(new Date().toISOString(), walletId, userPlatformId);
-
-            const success = result.changes > 0;
-            if (success) {
-                elizaLogger.info(`🔄 Switched to wallet ${walletId} for ${platformUser.platform} user ${platformUser.platformUserId}`);
-            }
-            
-            return success;
-        } catch (error) {
-            elizaLogger.error("Error switching wallet:", error);
+        // Prevent concurrent wallet operations for the same user
+        const lockKey = `switchWallet_${userPlatformId}`;
+        if (this.operationLocks.has(lockKey)) {
+            elizaLogger.warn(`Wallet switch already in progress for user ${userPlatformId}`);
             return false;
+        }
+
+        const transaction = this.runtime.databaseAdapter.db.transaction(() => {
+            try {
+                // First verify the wallet exists and belongs to the user
+                const walletExists = this.runtime.databaseAdapter!.db.prepare(`
+                    SELECT id FROM wallets 
+                    WHERE id = ? AND userPlatformId = ?
+                `).get(walletId, userPlatformId);
+
+                if (!walletExists) {
+                    throw new Error(`Wallet ${walletId} not found for user ${userPlatformId}`);
+                }
+
+                // Deactivate all wallets for this user
+                this.runtime.databaseAdapter!.db.prepare(`
+                    UPDATE wallets 
+                    SET isActive = 0 
+                    WHERE userPlatformId = ?
+                `).run(userPlatformId);
+
+                // Activate the selected wallet
+                const result = this.runtime.databaseAdapter!.db.prepare(`
+                    UPDATE wallets 
+                    SET isActive = 1, lastUsed = ? 
+                    WHERE id = ? AND userPlatformId = ?
+                `).run(new Date().toISOString(), walletId, userPlatformId);
+
+                if (result.changes === 0) {
+                    throw new Error(`Failed to activate wallet ${walletId}`);
+                }
+
+                return true;
+            } catch (error) {
+                elizaLogger.error("Transaction error in switchWallet:", error);
+                throw error;
+            }
+        });
+
+        const operationPromise = (async (): Promise<boolean> => {
+            try {
+                const success = transaction();
+                if (success) {
+                    elizaLogger.info(`🔄 Switched to wallet ${walletId} for ${platformUser.platform} user ${platformUser.platformUserId}`);
+                }
+                return success;
+            } catch (error) {
+                elizaLogger.error("Error switching wallet:", error);
+                return false;
+            }
+        })();
+
+        // Set the lock
+        this.operationLocks.set(lockKey, operationPromise);
+
+        try {
+            const result = await operationPromise;
+            return result;
+        } finally {
+            // Always cleanup the lock
+            this.operationLocks.delete(lockKey);
         }
     }
 
