@@ -303,6 +303,20 @@ export class DatabaseService {
                     isActive INTEGER DEFAULT 1,
                     activityCount INTEGER DEFAULT 0
                 );
+
+                -- Token registry table
+                CREATE TABLE IF NOT EXISTS token_registry (
+                    id TEXT PRIMARY KEY,
+                    symbol TEXT NOT NULL UNIQUE,
+                    name TEXT NOT NULL,
+                    address TEXT NOT NULL,
+                    decimals INTEGER DEFAULT 18,
+                    variations TEXT NOT NULL,
+                    chain TEXT NOT NULL DEFAULT 'pulsechain',
+                    isActive INTEGER DEFAULT 1,
+                    addedAt TEXT NOT NULL,
+                    updatedAt TEXT NOT NULL
+                );
             `);
 
             // Create indexes for performance
@@ -328,6 +342,9 @@ export class DatabaseService {
                 CREATE INDEX IF NOT EXISTS idx_performance_user ON performance_metrics(userPlatformId);
                 CREATE INDEX IF NOT EXISTS idx_sessions_user ON user_sessions(userPlatformId);
                 CREATE INDEX IF NOT EXISTS idx_sessions_active ON user_sessions(isActive, lastActiveAt);
+                
+                CREATE INDEX IF NOT EXISTS idx_token_registry_symbol ON token_registry(symbol);
+                CREATE INDEX IF NOT EXISTS idx_token_registry_chain ON token_registry(chain, isActive);
             `);
 
             elizaLogger.info("✅ Complete database schema initialized with all tables and indexes");
@@ -603,6 +620,125 @@ export class DatabaseService {
         );
 
         elizaLogger.info(`📊 Calculated performance metrics for ${period} period`);
+    }
+
+    // Token Registry Methods
+    async addToken(token: {
+        symbol: string;
+        name: string;
+        address: string;
+        decimals?: number;
+        variations: string[];
+        chain?: string;
+    }): Promise<string> {
+        if (!this.runtime.databaseAdapter) {
+            throw new Error("Database adapter not available");
+        }
+
+        const id = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const now = new Date().toISOString();
+        
+        await this.runtime.databaseAdapter.db.prepare(`
+            INSERT OR REPLACE INTO token_registry (
+                id, symbol, name, address, decimals, variations,
+                chain, isActive, addedAt, updatedAt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+            id, token.symbol, token.name, token.address,
+            token.decimals || 18, JSON.stringify(token.variations),
+            token.chain || 'pulsechain', 1, now, now
+        );
+
+        elizaLogger.info(`🪙 Added token to registry: ${token.symbol} (${token.name})`);
+        return id;
+    }
+
+    async getToken(symbol: string): Promise<any | null> {
+        if (!this.runtime.databaseAdapter) return null;
+
+        const token = await this.runtime.databaseAdapter.db.prepare(`
+            SELECT * FROM token_registry 
+            WHERE symbol = ? AND isActive = 1
+        `).get(symbol) as any;
+
+        if (!token) return null;
+
+        return {
+            ...token,
+            variations: JSON.parse(token.variations),
+            isActive: Boolean(token.isActive)
+        };
+    }
+
+    async getAllTokens(chain: string = 'pulsechain'): Promise<any[]> {
+        if (!this.runtime.databaseAdapter) return [];
+
+        const tokens = await this.runtime.databaseAdapter.db.prepare(`
+            SELECT * FROM token_registry 
+            WHERE chain = ? AND isActive = 1
+            ORDER BY symbol ASC
+        `).all(chain) as any[];
+
+        return tokens.map(token => ({
+            ...token,
+            variations: JSON.parse(token.variations),
+            isActive: Boolean(token.isActive)
+        }));
+    }
+
+    async searchTokens(query: string): Promise<any[]> {
+        if (!this.runtime.databaseAdapter) return [];
+
+        const searchPattern = `%${query.toLowerCase()}%`;
+        const tokens = await this.runtime.databaseAdapter.db.prepare(`
+            SELECT * FROM token_registry 
+            WHERE (LOWER(symbol) LIKE ? OR LOWER(name) LIKE ? OR LOWER(variations) LIKE ?)
+            AND isActive = 1
+            ORDER BY 
+                CASE 
+                    WHEN LOWER(symbol) = ? THEN 1
+                    WHEN LOWER(symbol) LIKE ? THEN 2
+                    ELSE 3
+                END,
+                symbol ASC
+            LIMIT 10
+        `).all(
+            searchPattern, searchPattern, searchPattern,
+            query.toLowerCase(), `${query.toLowerCase()}%`
+        ) as any[];
+
+        return tokens.map(token => ({
+            ...token,
+            variations: JSON.parse(token.variations),
+            isActive: Boolean(token.isActive)
+        }));
+    }
+
+    async importTokensFromJson(tokensData: any[]): Promise<number> {
+        if (!this.runtime.databaseAdapter) {
+            throw new Error("Database adapter not available");
+        }
+
+        let imported = 0;
+        
+        for (const token of tokensData) {
+            try {
+                await this.addToken({
+                    symbol: token.symbol,
+                    name: token.name,
+                    address: token.address,
+                    decimals: token.decimals,
+                    variations: token.variations || [token.symbol.toLowerCase()],
+                    chain: token.chain || 'pulsechain'
+                });
+                imported++;
+            } catch (error) {
+                elizaLogger.error(`Failed to import token ${token.symbol}:`, error);
+            }
+        }
+
+        elizaLogger.info(`✅ Imported ${imported} tokens into registry`);
+        return imported;
     }
 }
 
