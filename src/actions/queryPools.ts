@@ -7,7 +7,7 @@ import {
     State,
     type Action,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
 import { NineMmPoolDiscoveryService } from "../utils/9mm-v3-pool-discovery.js";
 import { NineMmV3PositionManager } from "../utils/9mm-v3-position-manager.js";
 import { NineMmV3FeeTracker } from "../utils/9mm-v3-fee-tracker.js";
@@ -27,7 +27,7 @@ const queryPoolsAction: Action = {
     ],
     validate: async (runtime: IAgentRuntime, message: Memory) => {
         const text = message.content.text;
-        const parsed = parseCommand(text);
+        const parsed = await parseCommand(text);
         
         return parsed.intent === 'poolQuery' && parsed.confidence > 0.6;
     },
@@ -40,7 +40,7 @@ const queryPoolsAction: Action = {
         callback?: HandlerCallback
     ): Promise<boolean> => {
         const text = message.content.text;
-        const parsed = parseCommand(text);
+        const parsed = await parseCommand(text);
         
         try {
             const poolDiscovery = new NineMmPoolDiscoveryService();

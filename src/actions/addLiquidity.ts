@@ -7,7 +7,7 @@ import {
     State,
     type Action,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
 import { NineMmPoolDiscoveryService } from "../utils/9mm-v3-pool-discovery.js";
 import { NineMmV3PositionManager } from "../utils/9mm-v3-position-manager.js";
 import { POPULAR_TOKENS } from "../config/chains.js";

@@ -61,6 +61,7 @@ Available Intents:
 - price: Get token price information  
 - balance: Check wallet token balances
 - wallet: Create/manage wallets
+- address: Show wallet address
 - addLiquidity: Add liquidity to pools
 - removeLiquidity: Remove liquidity from pools
 - poolQuery: Query pool information
@@ -149,7 +150,7 @@ Output: {"intent": "swap", "fromToken": "USDC", "toToken": "PLS", "amount": "100
      */
     private validateIntent(intent: string): ParsedCommand['intent'] {
         const validIntents: ParsedCommand['intent'][] = [
-            'swap', 'price', 'balance', 'wallet', 'addLiquidity', 
+            'swap', 'price', 'balance', 'wallet', 'address', 'addLiquidity', 
             'removeLiquidity', 'poolQuery', 'portfolio', 'help', 'unknown'
         ];
         

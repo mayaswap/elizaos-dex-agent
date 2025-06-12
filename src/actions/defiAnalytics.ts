@@ -7,7 +7,7 @@ import {
     State,
     type Action,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
 import { GraphQLClient, gql } from 'graphql-request';
 
 const defiAnalyticsAction: Action = {

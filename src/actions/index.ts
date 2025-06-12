@@ -17,6 +17,7 @@ export { default as positionTrackingAction } from './positionTracking.js';
 export { default as advancedOrdersAction } from './advancedOrders.js';
 export { default as startMonitoringAction } from './startMonitoring.js';
 export { default as walletManagementAction } from './walletManagement.js';
+export { default as walletAddressAction } from './walletAddress.js';
 
 // Export all actions as an array for easy registration with ElizaOS runtime
 export const allActions = async () => {
@@ -44,6 +45,7 @@ export const allActions = async () => {
     const { default: tradingAnalyticsAction } = await import('./tradingAnalytics.js');
     const { default: priceAlertsAction } = await import('./priceAlerts.js');
     const { default: watchlistsAction } = await import('./watchlists.js');
+    const { default: walletAddressAction } = await import('./walletAddress.js');
     
     return [
         swapAction,
@@ -65,6 +67,7 @@ export const allActions = async () => {
         advancedOrdersAction,
         startMonitoringAction,
         walletManagementAction, // Advanced wallet management 
+        walletAddressAction, // Wallet address display
         tradingAnalyticsAction,
         priceAlertsAction,
         watchlistsAction

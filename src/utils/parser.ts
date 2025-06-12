@@ -12,7 +12,7 @@ const MAX_CACHE_SIZE = 100; // Maximum cache entries to prevent memory leaks
  */
 
 export interface ParsedCommand {
-  intent: 'swap' | 'price' | 'balance' | 'portfolio' | 'help' | 'addLiquidity' | 'removeLiquidity' | 'poolQuery' | 'wallet' | 'unknown';
+  intent: 'swap' | 'price' | 'balance' | 'portfolio' | 'help' | 'addLiquidity' | 'removeLiquidity' | 'poolQuery' | 'wallet' | 'address' | 'unknown';
   fromToken?: string;
   toToken?: string;
   amount?: string;
@@ -103,6 +103,10 @@ const INTENT_PATTERNS = {
     /\bprice\s+of\s+\w+/i,
     /\bwhat'?s\s+\w+\s+trading\s+at/i,
     /\b\w+\s+to\s+usd\s+price/i,
+    /\bwhat\s+about\s+\w+/i,
+    /\btell\s+me\s+about\s+\w+/i,
+    /\binfo\s+on\s+\w+/i,
+    /\b(check|show)\s+\w+/i,
   ],
   
   balance: [
@@ -134,6 +138,16 @@ const INTENT_PATTERNS = {
     /\bwhat\s+can\s+you\s+do\b/i,
     /\bhow\s+(to|do\s+i)\b/i,
     /\bguide\b/i,
+  ],
+  
+  address: [
+    /\bshow\s+(my\s+)?(wallet\s+)?address\b/i,
+    /\bwhat'?s\s+my\s+address\b/i,
+    /\bmy\s+wallet\s+address\b/i,
+    /\bget\s+my\s+address\b/i,
+    /\bdisplay\s+(my\s+)?address\b/i,
+    /\bwhere\s+is\s+my\s+address\b/i,
+    /\bwhat\s+is\s+my\s+wallet\s+address\b/i,
   ],
 };
 
@@ -372,6 +386,12 @@ function parseWithRegex(input: string): ParsedCommand {
     case 'help':
       return {
         intent: 'help',
+        confidence: 0.9,
+        rawInput: input,
+      };
+    case 'address':
+      return {
+        intent: 'address',
         confidence: 0.9,
         rawInput: input,
       };

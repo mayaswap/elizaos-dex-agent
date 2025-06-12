@@ -7,7 +7,7 @@ import type {
     HandlerCallback,
     Content
 } from '@elizaos/core';
-import { parseCommand } from '../utils/parser.js';
+import { parseCommand } from '../utils/smartParser.js';
 import { POPULAR_TOKENS, CHAIN_CONFIGS } from '../config/chains.js';
 import { WalletService, createPlatformUser } from '../services/walletService.js';
 

@@ -7,7 +7,7 @@ import {
     State,
     type Action,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
 import { WalletService, createPlatformUser } from "../services/walletService.js";
 
 const multiChainAction: Action = {

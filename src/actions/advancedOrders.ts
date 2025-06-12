@@ -6,7 +6,7 @@ import {
     Memory,
     State,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
 import { priceMonitor } from "../services/priceMonitor.js";
 
 const advancedOrdersAction: Action = {

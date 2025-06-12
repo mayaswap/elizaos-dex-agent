@@ -7,7 +7,7 @@ import {
     State,
     type Action,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
 import { WalletService, createPlatformUser } from "../services/walletService.js";
 
 const slippageManagementAction: Action = {
@@ -41,7 +41,7 @@ const slippageManagementAction: Action = {
             
             // Parse slippage percentage from message
             const percentageMatch = text.match(/(\d+(?:\.\d+)?)\s*%/);
-            const requestedSlippage = percentageMatch ? parseFloat(percentageMatch[1]) : null;
+            const requestedSlippage = percentageMatch?.[1] ? parseFloat(percentageMatch[1]) : null;
             
             // Get platform user and wallet settings
             const platformUser = createPlatformUser(runtime, message);

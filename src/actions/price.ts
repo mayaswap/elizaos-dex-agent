@@ -7,7 +7,7 @@ import {
     State,
     type Action,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
 import { NineMMAggregator } from "../utils/aggregator.js";
 import { POPULAR_TOKENS } from "../config/chains.js";
 
@@ -66,11 +66,16 @@ const priceAction: Action = {
             // Get token addresses from popular tokens config
             const pulsechainTokens = POPULAR_TOKENS.pulsechain;
             
-            const tokenAddress = pulsechainTokens[parsed.fromToken as keyof typeof pulsechainTokens];
+            let tokenAddress = pulsechainTokens[parsed.fromToken as keyof typeof pulsechainTokens];
             const tokenMetadata = TOKEN_METADATA[parsed.fromToken];
             
             if (!tokenAddress) {
                 throw new Error(`Token not found: ${parsed.fromToken}`);
+            }
+
+            // For native PLS, use WPLS address for price queries since APIs work better with ERC-20 tokens
+            if (parsed.fromToken === 'PLS' && tokenAddress === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
+                tokenAddress = pulsechainTokens.WPLS; // Use WPLS for price data
             }
 
             // Use dedicated price API for direct USD prices

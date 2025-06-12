@@ -7,7 +7,7 @@ import {
     State,
     type Action,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
 import { NineMmV3PositionManager } from "../utils/9mm-v3-position-manager.js";
 import { WalletService, createPlatformUser } from "../services/walletService.js";
 

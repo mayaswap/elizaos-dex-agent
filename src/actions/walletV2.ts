@@ -7,7 +7,7 @@ import type {
     HandlerCallback,
     Content
 } from '@elizaos/core';
-import { parseCommand } from '../utils/parser.js';
+import { parseCommand } from '../utils/smartParser.js';
 import { WalletService, createPlatformUser, PlatformUser } from '../services/walletService.js';
 
 const walletV2Action: Action = {

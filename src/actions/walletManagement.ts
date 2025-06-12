@@ -6,7 +6,8 @@ import {
     Memory,
     State,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
+import { WalletStorage } from "../utils/wallet-storage.js";
 import { WalletService, createPlatformUser } from "../services/walletService.js";
 
 const walletManagementAction: Action = {

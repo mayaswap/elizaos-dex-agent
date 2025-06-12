@@ -6,7 +6,7 @@ import {
     Memory,
     State,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
 import { createPlatformUser } from "../services/walletService.js";
 import { DatabaseService } from "../services/databaseService.js";
 

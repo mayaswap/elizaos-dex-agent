@@ -7,7 +7,7 @@ import {
     State,
     type Action,
 } from "@elizaos/core";
-import { parseCommand } from "../utils/parser.js";
+import { parseCommand } from "../utils/smartParser.js";
 import { NineMMAggregator } from "../utils/aggregator.js";
 import { POPULAR_TOKENS } from "../config/chains.js";
 
