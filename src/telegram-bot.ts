@@ -15,6 +15,7 @@ import { DatabaseService } from './services/databaseService.js';
 import { PriceService } from './services/priceService.js';
 import Database from 'better-sqlite3';
 import fs from 'fs';
+import { generateCharacterResponse, enhanceResponseWithPersonality } from './utils/characterResponses.js';
 
 // Load environment variables
 dotenv.config();
@@ -85,35 +86,30 @@ class ElizaOSTelegramBot {
         // Start command
         this.bot.onText(/\/start/, (msg) => {
             const chatId = msg.chat.id;
-            const welcomeMessage = `🚀 *Welcome to 9mm DEX Trading Agent!*
+            const userName = msg.from?.first_name || 'trader';
+            
+            const welcomeMessage = `🚀 *Hey ${userName}! Welcome to DEX Master!*
 
-I'm your AI-powered trading assistant for the 9mm DEX on PulseChain. Here's what I can help you with:
+I'm your specialized AI trading companion for PulseChain and 9mm DEX. Think of me as your personal DeFi expert who never sleeps! 💪
 
-📊 *Price & Market Data:*
-• /price [token] - Get current token price
-• /chart [token] - View price charts
-• /volume [token] - Trading volume info
+Here's how I can supercharge your trading:
 
-💰 *Wallet Management:*
-• /wallet - Manage your wallets
-• /balance - Check wallet balances
-• /wallets - List all your wallets
+💎 *Quick Start Commands:*
+• "What's the price of HEX?" - Real-time prices
+• "Create a wallet" - Secure wallet setup
+• "Show my balance" - Portfolio overview
+• "Help" - See all my capabilities
 
-🔔 *Alerts & Monitoring:*
-• /alerts - Manage price alerts
-• /watchlist - Token watchlist
-• /portfolio - Portfolio overview
+🔥 *My Specialties:*
+• 📊 Real-time market analysis
+• 💼 Bank-grade wallet security (AES-256)
+• 🔄 Smart swap execution
+• 📈 Portfolio tracking & analytics
+• 🔔 Price alerts that never miss
 
-💱 *Trading:*
-• /swap - Token swapping
-• /liquidity - Liquidity management
-• /analytics - Trading analytics
+💬 *Pro Tip:* Just talk to me naturally! No need to memorize commands. Try saying "Hi" or asking about any token!
 
-📚 *Help & Support:*
-• /help - Show all commands
-• /about - Learn more about this bot
-
-Type any command to get started! 🎯`;
+Ready to explore the markets together? What interests you most? 🎯`;
 
             this.bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
         });
@@ -704,7 +700,7 @@ Need help? Type /help for commands! 🚀`;
     // Natural language handlers
     private async handleCreateWalletNaturally(chatId: number, platformUser: PlatformUser, originalText: string): Promise<void> {
         try {
-            this.bot.sendMessage(chatId, '🔄 I\'ll create a new wallet for you...');
+            this.bot.sendMessage(chatId, '🔄 Alright, let me forge you a new wallet with bank-grade security! This\'ll just take a moment...');
 
             // Extract wallet name from natural language if provided
             let walletName: string | undefined;
@@ -720,24 +716,24 @@ Need help? Type /help for commands! 🚀`;
             
             console.log(`✅ Wallet created successfully: ${newWallet.address}`);
             
-            const successMessage = `✅ *Perfect! Your wallet has been created!*
+            const successMessage = enhanceResponseWithPersonality(`✅ *Boom! Your wallet is ready to rock!*
 
-🔐 *Wallet Details:*
+🔐 *Fresh Wallet Details:*
 • **Name:** ${newWallet.name}
 • **Address:** \`${newWallet.address}\`
 • **Network:** PulseChain
-• **Status:** Ready for use
+• **Status:** Armed and ready! 💪
 
-🛡️ *Security:*
-Your private key is encrypted with AES-256 and stored securely. Only you can access it.
+🛡️ *Security Level: MAXIMUM*
+Your private key is locked down with military-grade AES-256 encryption. Not even I can see it - that's how secure we're talking!
 
-💡 *What you can do now:*
-• Send PLS to your address to fund it
-• Ask me to "check my balance"
-• Say "show me my wallets" to see all wallets
-• Start trading by saying things like "swap tokens"
+🚀 *Your Next Moves:*
+• Send some PLS to this address to fuel up
+• Say "check my balance" anytime
+• "Show my wallets" to see your arsenal
+• Ready to trade? Just say "swap HEX for USDC" or whatever you fancy!
 
-Just talk to me naturally - I understand! 🚀`;
+Remember: Never share your private key with ANYONE. I've got your back on security! 🔒`, 'positive');
 
             this.bot.sendMessage(chatId, successMessage, { parse_mode: 'Markdown' });
             
@@ -885,7 +881,7 @@ Once you have a wallet, I can show you balances for PLS, HEX, USDC, and more! �
             const token = tokenMatch[0].toUpperCase();
             
             try {
-                this.bot.sendMessage(chatId, `🔍 Let me check the current ${token} price for you...`);
+                this.bot.sendMessage(chatId, `🔍 Hold tight! Pulling live ${token} data from the blockchain...`);
                 
                 const priceData = await this.priceService.getTokenPrice(token);
                 
@@ -893,16 +889,23 @@ Once you have a wallet, I can show you balances for PLS, HEX, USDC, and more! �
                     const price = priceData.data;
                     const changeEmoji = price.change24h >= 0 ? '📈' : '📉';
                     
-                    const response = `💰 ${token} is currently $${price.price}
+                    const priceAnalysis = price.change24h >= 0 ? 
+                        `Looking ${price.change24h > 5 ? 'bullish' : 'steady'} today!` :
+                        `Taking a ${price.change24h < -5 ? 'dip' : 'breather'} - might be a good entry!`;
+                    
+                    const response = `💰 **${token} Market Update**
 
-${changeEmoji} 24h change: ${price.change24h ? price.change24h.toFixed(2) : 'N/A'}%
-💧 Liquidity: $${price.liquidity ? price.liquidity.toLocaleString() : 'N/A'}
-📊 Volume: $${price.volume24h ? price.volume24h.toLocaleString() : 'N/A'}
+**Price:** $${price.price} ${changeEmoji}
+**24h Move:** ${price.change24h ? price.change24h.toFixed(2) : 'N/A'}%
+**Liquidity:** $${price.liquidity ? price.liquidity.toLocaleString() : 'N/A'}
+**Volume:** $${price.volume24h ? price.volume24h.toLocaleString() : 'N/A'}
 
-Want to know anything else? Try asking:
-• "What about HEX price?"
-• "Show me trading volume"
-• "How much is PLSX worth?"`;
+💡 *Quick Analysis:* ${priceAnalysis}
+
+Curious about other tokens? Just ask! I'm tracking all the hot ones:
+• "How's HEX doing?"
+• "PLSX price check"
+• "What's moving today?"`;
 
                     this.bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
                 } else {
@@ -1020,46 +1023,13 @@ Go ahead and paste your private key or seed phrase! 🔒`;
     }
 
     private async handleHelpNaturally(chatId: number): Promise<void> {
-        const response = `🤖 **I'm your AI trading assistant for 9mm DEX!**
-
-🗣️ **Talk to me naturally! No commands needed.**
-
-**💼 Wallet Management:**
-• "Create a wallet" or "Make me a new wallet"
-• "Show my wallets" or "Check my balance"
-• "Import my wallet" + paste your private key
-
-**💰 Price & Trading:**
-• "What's the price of PLS?" or "How much is HEX?"
-• "I want to swap tokens" or "Trade some coins"
-• "Set up a price alert for PULSE"
-
-**📊 Portfolio & Analytics:**
-• "Show my portfolio" or "How am I doing?"
-• "Check my trading history"
-• "What's my best performing token?"
-
-**💡 Just ask me naturally!**
-Instead of memorizing commands, just tell me what you want to do. I understand conversational language!
-
-Try saying: "I want to create a wallet and check PLS price" 🚀`;
-
+        const response = generateCharacterResponse('telegram', 'help me');
         this.bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
     }
 
     private async handleGeneralConversation(chatId: number, text: string, platformUser: PlatformUser): Promise<void> {
-        // For general conversation, provide helpful suggestions
-        const response = `🤖 I'm here to help with DeFi trading on PulseChain!
-
-I didn't quite understand "${text}" but I can help you with:
-
-💼 **Wallet stuff:** "Create a wallet", "Show my balance"
-💰 **Prices:** "What's PLS price?", "Check HEX value"
-📊 **Trading:** "Swap tokens", "Add liquidity"
-🔔 **Alerts:** "Alert me when PLS hits $0.001"
-
-**What would you like to do?** Just tell me in your own words! 🗣️`;
-
+        // Use character-based response for natural conversation
+        const response = generateCharacterResponse('telegram', text);
         this.bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
     }
 
