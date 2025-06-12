@@ -9,7 +9,7 @@ import {
 } from "@elizaos/core";
 import { parseCommand } from "../utils/parser.js";
 import { NineMmV3PositionManager } from "../utils/9mm-v3-position-manager.js";
-import { WalletStorage } from "../utils/wallet-storage.js";
+import { WalletService, createPlatformUser } from "../services/walletService.js";
 
 const portfolioAction: Action = {
     name: "PORTFOLIO_OVERVIEW",
@@ -37,11 +37,14 @@ const portfolioAction: Action = {
     ): Promise<boolean> => {
         try {
             const positionManager = new NineMmV3PositionManager();
-            const walletStorage = WalletStorage.getInstance();
+            
+            // Create platform user and get wallets using new system
+            const platformUser = createPlatformUser(runtime, message);
+            const walletService = new WalletService(runtime);
             
             // Get user wallets
-            const userWallets = walletStorage.getAllWallets();
-            const walletCount = Object.keys(userWallets).length;
+            const userWallets = await walletService.getUserWallets(platformUser);
+            const walletCount = userWallets.length;
             
             if (walletCount === 0) {
                 if (callback) {

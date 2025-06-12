@@ -8,7 +8,7 @@ import {
     type Action,
 } from "@elizaos/core";
 import { parseCommand } from "../utils/parser.js";
-import { WalletStorage } from "../utils/wallet-storage.js";
+import { WalletService, createPlatformUser } from "../services/walletService.js";
 
 const multiChainAction: Action = {
     name: "MULTI_CHAIN_SUPPORT",
@@ -81,9 +81,10 @@ const multiChainAction: Action = {
 
             // Check for balance inquiry across chains
             if (text.includes('balance') && !targetChain) {
-                const walletStorage = WalletStorage.getInstance();
-                const userWallets = walletStorage.getAllWallets();
-                const walletCount = Object.keys(userWallets).length;
+                const platformUser = createPlatformUser(runtime, message);
+                const walletService = new WalletService(runtime);
+                const userWallets = await walletService.getUserWallets(platformUser);
+                const walletCount = userWallets.length;
 
                 if (walletCount === 0) {
                     if (callback) {

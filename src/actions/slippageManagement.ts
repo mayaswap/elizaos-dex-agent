@@ -8,7 +8,7 @@ import {
     type Action,
 } from "@elizaos/core";
 import { parseCommand } from "../utils/parser.js";
-import { WalletStorage } from "../utils/wallet-storage.js";
+import { WalletService, createPlatformUser } from "../services/walletService.js";
 
 const slippageManagementAction: Action = {
     name: "SLIPPAGE_MANAGEMENT",
@@ -21,7 +21,7 @@ const slippageManagementAction: Action = {
         "MEV_PROTECTION"
     ],
     validate: async (runtime: IAgentRuntime, message: Memory) => {
-        const text = message.content.text.toLowerCase();
+        const text = message.content?.text?.toLowerCase() || '';
         const slippageKeywords = ['slippage', 'tolerance', 'protection', 'mev', 'execution'];
         const actionKeywords = ['set', 'change', 'update', 'configure', 'use', 'enable', 'disable'];
         
@@ -37,33 +37,37 @@ const slippageManagementAction: Action = {
         callback?: HandlerCallback
     ): Promise<boolean> => {
         try {
-            const text = message.content.text.toLowerCase();
+            const text = message.content?.text?.toLowerCase() || '';
             
             // Parse slippage percentage from message
             const percentageMatch = text.match(/(\d+(?:\.\d+)?)\s*%/);
             const requestedSlippage = percentageMatch ? parseFloat(percentageMatch[1]) : null;
             
-            // Get persistent settings from storage
-            const walletStorage = WalletStorage.getInstance();
-            const activeWallet = walletStorage.getActiveWallet();
+            // Get platform user and wallet settings
+            const platformUser = createPlatformUser(runtime, message);
+            const walletService = new WalletService(runtime);
+            
+            const activeWallet = await walletService.getActiveWallet(platformUser);
             
             if (!activeWallet) {
                 if (callback) {
                     callback({
                         text: `❌ **No Active Wallet**
 
-Please switch to a wallet first before managing slippage settings.
+Please create a wallet first before managing slippage settings.
 
-**Use:** "List wallets" to see available wallets
-**Then:** "Switch to [wallet name]"
+**Quick Setup:**
+• "Create a wallet" to get started
+• "Import wallet" if you have an existing one
 
-Each wallet has its own independent slippage settings.`
+Each wallet has its own independent slippage settings stored securely.`
                     });
                 }
                 return true;
             }
             
-            const persistentSettings = walletStorage.getWalletSettings() || {
+            // Use wallet settings from the new system
+            const persistentSettings = activeWallet.settings || {
                 slippagePercentage: 0.5,
                 mevProtection: true,
                 autoSlippage: false,
@@ -123,7 +127,7 @@ Try: "Set slippage to 1%" or "Use 0.3% slippage"`
                 }
 
                 // Save the updated slippage setting
-                walletStorage.saveWalletSettings({ slippagePercentage: requestedSlippage });
+                await walletService.updateWalletSettings(platformUser, activeWallet.id, { slippagePercentage: requestedSlippage });
 
                 const responseText = `⚙️ **Slippage Updated - ${requestedSlippage}%**
 
@@ -164,7 +168,7 @@ For a $1,000 trade, you might receive ${(1000 * (1 - requestedSlippage/100)).toF
                     const newStatus = enable;
                     
                     // Save MEV protection setting
-                    walletStorage.saveWalletSettings({ 
+                    await walletService.updateWalletSettings(platformUser, activeWallet.id, { 
                         mevProtection: newStatus
                     });
                     
@@ -205,7 +209,7 @@ ${newStatus ?
                 
                 // Save auto slippage setting if enabling
                 if (enable) {
-                    walletStorage.saveWalletSettings({ autoSlippage: true });
+                    await walletService.updateWalletSettings(platformUser, activeWallet.id, { autoSlippage: true });
                 }
                 
                 const responseText = `🤖 **Auto Slippage ${enable ? 'Enabled' : 'Status'}**
