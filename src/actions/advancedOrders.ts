@@ -20,7 +20,7 @@ const advancedOrdersAction: Action = {
     ],
     description: "Advanced order types: limit orders, stop loss, take profit, and conditional trading",
     validate: async (runtime: IAgentRuntime, message: Memory) => {
-        const text = message.content.text.toLowerCase();
+        const text = message.content?.text?.toLowerCase() || '';
         
         const orderKeywords = [
             'limit order', 'stop loss', 'take profit', 'conditional', 'order',
@@ -38,7 +38,7 @@ const advancedOrdersAction: Action = {
         callback?: HandlerCallback
     ) => {
         try {
-            const text = message.content.text.toLowerCase();
+            const text = message.content?.text?.toLowerCase() || '';
             
             // Determine order type
             let orderType = 'explanation';
