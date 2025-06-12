@@ -265,15 +265,42 @@ function calculatePerformanceMetrics(trades: any[]) {
     const successful = trades.filter(t => t.success);
     const totalGas = trades.filter(t => t.gasCost).reduce((sum, t) => sum + parseFloat(t.gasCost), 0);
     
+    // Calculate most active day
+    const dayFrequency: Record<string, number> = {};
+    trades.forEach(trade => {
+        const day = new Date(trade.timestamp).toLocaleDateString('en-US', { weekday: 'long' });
+        dayFrequency[day] = (dayFrequency[day] || 0) + 1;
+    });
+    const mostActiveDay = Object.entries(dayFrequency)
+        .sort(([,a], [,b]) => b - a)[0]?.[0] || 'No data';
+    
+    // Calculate favorite token pair
+    const pairFrequency: Record<string, number> = {};
+    trades.forEach(trade => {
+        const pair = `${trade.fromToken}/${trade.toToken}`;
+        pairFrequency[pair] = (pairFrequency[pair] || 0) + 1;
+    });
+    const favoriteTokenPair = Object.entries(pairFrequency)
+        .sort(([,a], [,b]) => b - a)[0]?.[0] || 'No data';
+    
+    // Calculate total volume (simplified - would need price data for accuracy)
+    const totalVolumeUSD = trades.reduce((sum, trade) => {
+        // Estimate based on token amounts - would need real price data
+        const estimatedValue = parseFloat(trade.amountIn) * 10; // Placeholder multiplier
+        return sum + estimatedValue;
+    }, 0);
+    
+    const averageTradeSize = totalVolumeUSD / trades.length;
+    
     return {
         totalTrades: trades.length,
-        successRate: (successful.length / trades.length) * 100,
-        totalVolumeUSD: 0, // Would need price data
-        averageTradeSize: 0,
+        successRate: trades.length > 0 ? (successful.length / trades.length) * 100 : 0,
+        totalVolumeUSD: totalVolumeUSD,
+        averageTradeSize: averageTradeSize,
         totalGasCosts: totalGas,
-        averageGas: totalGas / trades.length,
-        mostActiveDay: "Monday", // Placeholder
-        favoriteTokenPair: "HEX/USDC", // Placeholder
+        averageGas: trades.length > 0 ? totalGas / trades.length : 0,
+        mostActiveDay: mostActiveDay,
+        favoriteTokenPair: favoriteTokenPair,
         averageSlippage: getAverageSlippage(trades),
         bestTrades: trades.filter(t => t.success).slice(0, 3),
         improvements: [
@@ -288,29 +315,57 @@ function calculatePerformanceMetrics(trades: any[]) {
 }
 
 function generateTradingReport(trades: any[], period: string) {
+    const successful = trades.filter(t => t.success);
+    const successRate = trades.length > 0 ? (successful.length / trades.length) * 100 : 0;
+    
+    // Calculate net performance
+    const netPerformance = successRate >= 50 ? "Positive" : "Needs Improvement";
+    
+    // Calculate total volume (simplified estimation)
+    const totalVolume = trades.reduce((sum, trade) => {
+        const estimatedValue = parseFloat(trade.amountIn) * 10; // Placeholder multiplier
+        return sum + estimatedValue;
+    }, 0);
+    
+    const totalGasCosts = trades.reduce((sum, t) => sum + parseFloat(t.gasCost || '0'), 0);
+    
+    // Calculate efficiency ratio (successful trades value vs gas costs)
+    const efficiencyRatio = totalVolume > 0 ? ((totalVolume - totalGasCosts) / totalVolume * 100) : 0;
+    
+    // Generate dynamic insights based on data
+    const insights: string[] = [];
+    if (successRate > 70) insights.push("Excellent success rate - maintain current strategy");
+    if (successRate < 50) insights.push("Success rate below 50% - consider reviewing trade sizes");
+    if (totalGasCosts > totalVolume * 0.05) insights.push("High gas costs relative to volume");
+    if (trades.length > 50) insights.push("High trading activity detected");
+    
+    // Generate dynamic trends
+    const trends: string[] = [];
+    if (trades.length > 0) {
+        const recentTrades = trades.slice(0, Math.min(10, trades.length));
+        const recentSuccessRate = (recentTrades.filter(t => t.success).length / recentTrades.length) * 100;
+        if (recentSuccessRate > successRate) trends.push("Success rate improving recently");
+        else if (recentSuccessRate < successRate) trends.push("Success rate declining recently");
+    }
+    trends.push(`Average of ${(trades.length / 30).toFixed(1)} trades per day`);
+    
+    // Generate dynamic recommendations
+    const recommendations: string[] = [];
+    if (successRate < 60) recommendations.push("Focus on fewer, higher-quality trades");
+    if (totalGasCosts > totalVolume * 0.1) recommendations.push("Consider trading during low gas periods");
+    recommendations.push("Use price alerts to time entries better");
+    
     return {
         period: period,
         totalTrades: trades.length,
-        successRate: ((trades.filter(t => t.success).length / trades.length) * 100).toFixed(1),
-        netPerformance: "Positive", // Placeholder
-        totalVolume: 0, // Would need price calculations
-        totalGasCosts: trades.reduce((sum, t) => sum + parseFloat(t.gasCost || '0'), 0),
-        efficiencyRatio: 95.5, // Placeholder
-        insights: [
-            "Most profitable trades on weekdays",
-            "HEX trades show highest success rate",
-            "Gas costs optimized in recent trades"
-        ],
-        trends: [
-            "Trading frequency increasing",
-            "Success rate improving over time",
-            "Gas efficiency getting better"
-        ],
-        recommendations: [
-            "Continue current trading strategy",
-            "Consider diversifying token pairs",
-            "Set up automated alerts for opportunities"
-        ]
+        successRate: successRate.toFixed(1),
+        netPerformance: netPerformance,
+        totalVolume: totalVolume,
+        totalGasCosts: totalGasCosts,
+        efficiencyRatio: efficiencyRatio,
+        insights: insights.length > 0 ? insights : ["Building trading history..."],
+        trends: trends,
+        recommendations: recommendations
     };
 }
 

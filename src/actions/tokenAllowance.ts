@@ -45,7 +45,37 @@ const tokenAllowanceAction: Action = {
             if (text.includes('revoke') || text.includes('remove')) action = 'revoke';
             else if (text.includes('set') || text.includes('approve') || text.includes('authorize')) action = 'set';
             
-            // Mock allowance data (in production, query blockchain)
+            // Token allowance functionality coming soon
+            const allowanceCheckAvailable = false;
+            
+            if (!allowanceCheckAvailable) {
+                if (callback) {
+                    callback({
+                        text: `🔐 **Token Allowances**
+
+⚠️ **Coming Soon!**
+
+Token allowance management is under development.
+
+**What's coming:**
+• View current token approvals
+• Revoke unnecessary allowances
+• Set custom allowance amounts
+• Security recommendations
+• Gas-efficient approval strategies
+
+**Security Tips:**
+• Only approve what you need
+• Revoke unused allowances
+• Use exact amounts when possible
+
+Token allowance management will help you maintain better security. Stay tuned!`
+                    });
+                }
+                return true;
+            }
+            
+            // Future implementation
             const mockAllowanceData = {
                 currentAllowances: [
                     {

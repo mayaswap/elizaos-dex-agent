@@ -107,56 +107,30 @@ To check balances across chains, you need to connect a wallet first.
                     return true;
                 }
 
-                // Mock multi-chain balance data
-                const mockBalances = {
-                    pulsechain: {
-                        totalUSD: 8450.75,
-                        tokens: [
-                            { symbol: "PLS", balance: "25,000", usd: 4500 },
-                            { symbol: "HEX", balance: "150,000", usd: 3200 },
-                            { symbol: "USDC", balance: "750", usd: 750 }
-                        ]
-                    },
-                    base: {
-                        totalUSD: 2850.30,
-                        tokens: [
-                            { symbol: "ETH", balance: "1.25", usd: 2100 },
-                            { symbol: "USDC", balance: "650", usd: 650 },
-                            { symbol: "cbETH", balance: "0.05", usd: 100.30 }
-                        ]
-                    },
-                    sonic: {
-                        totalUSD: 1200.50,
-                        tokens: [
-                            { symbol: "S", balance: "15,000", usd: 900 },
-                            { symbol: "USDT", balance: "300", usd: 300 },
-                            { symbol: "SONIC", balance: "500", usd: 0.50 }
-                        ]
-                    }
-                };
-
-                const totalPortfolio = Object.values(mockBalances).reduce((sum, chain) => sum + chain.totalUSD, 0);
-
                 const responseText = `🌐 **Multi-Chain Portfolio Overview**
 
-💰 **Total Portfolio Value**: $${totalPortfolio.toLocaleString()}
+💼 **Connected Wallets**: ${walletCount} wallet${walletCount > 1 ? 's' : ''}
 
-${Object.entries(mockBalances).map(([chainKey, data]) => {
-    const chain = supportedChains[chainKey as keyof typeof supportedChains];
-    const percentage = ((data.totalUSD / totalPortfolio) * 100).toFixed(1);
-    
-    return `**${chain.name}** - $${data.totalUSD.toLocaleString()} (${percentage}%)
-${data.tokens.map(token => 
-    `   • ${token.symbol}: ${token.balance} (~$${token.usd.toLocaleString()})`
-).join('\n')}`;
-}).join('\n\n')}
+⚠️ **Multi-Chain Balance Check**: Coming Soon!
 
-**Quick Actions:**
+Currently, I can:
+✅ Show PulseChain balances (real-time)
+🔄 Switch between networks
+📊 Provide network information
+
+Multi-chain balance checking across Base and Sonic is under development. 
+
+**Available Now:**
+• "Show my balance" - Check PulseChain balances
 • "Switch to Base network" - Change active chain
-• "Show Sonic balance" - Chain-specific balance
-• "Swap on PulseChain" - Chain-specific operations
+• "What chains are supported?" - View all networks
 
-*Balances updated across all connected chains*`;
+**Coming Soon:**
+• Real-time Base network balances
+• Sonic chain integration
+• Cross-chain portfolio analytics
+
+*Stay tuned for full multi-chain support!*`;
 
                 if (callback) {
                     callback({

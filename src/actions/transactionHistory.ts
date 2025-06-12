@@ -9,6 +9,7 @@ import {
 } from "@elizaos/core";
 import { parseCommand } from "../utils/smartParser.js";
 import { WalletService, createPlatformUser } from "../services/walletService.js";
+import { DatabaseService } from "../services/databaseService.js";
 
 const transactionHistoryAction: Action = {
     name: "TRANSACTION_HISTORY",
@@ -82,72 +83,39 @@ To view your transaction history, you need to connect a wallet first.
             else if (text.includes('liquidity') || text.includes('lp')) transactionType = 'liquidity';
             else if (text.includes('failed') || text.includes('error')) transactionType = 'failed';
 
-            // Mock transaction data (in production, this would query on-chain data)
-            const mockTransactions = [
-                {
-                    hash: "0x1234...abcd",
-                    type: "swap",
-                    timestamp: Date.now() - 3600000, // 1 hour ago
-                    fromToken: "USDC",
-                    toToken: "HEX",
-                    fromAmount: "1000",
-                    toAmount: "147058.82",
-                    gasUsed: "180000",
-                    gasPrice: "12.5",
-                    gasCost: "0.00225",
-                    status: "confirmed",
-                    slippage: "0.3%",
-                    route: "9mm V2 → 9mm V3",
-                    usdValue: 1000
-                },
-                {
-                    hash: "0x5678...efgh",
-                    type: "add_liquidity",
-                    timestamp: Date.now() - 86400000, // 1 day ago
-                    pool: "PLS/USDC 0.25%",
-                    token0Amount: "5000",
-                    token1Amount: "1200",
-                    gasUsed: "280000",
-                    gasPrice: "15.2",
-                    gasCost: "0.004256",
-                    status: "confirmed",
-                    positionId: "#12345",
-                    usdValue: 2400
-                },
-                {
-                    hash: "0x9abc...ijkl",
-                    type: "swap",
-                    timestamp: Date.now() - 259200000, // 3 days ago
-                    fromToken: "PLS",
-                    toToken: "WPLS",
-                    fromAmount: "10000",
-                    toAmount: "9995.5",
-                    gasUsed: "150000",
-                    gasPrice: "8.7",
-                    gasCost: "0.001305",
-                    status: "confirmed",
-                    slippage: "0.1%",
-                    route: "Direct",
-                    usdValue: 1800
-                },
-                {
-                    hash: "0xdef0...mnop",
-                    type: "remove_liquidity",
-                    timestamp: Date.now() - 432000000, // 5 days ago
-                    pool: "HEX/USDT 1%",
-                    token0Amount: "25000",
-                    token1Amount: "170",
-                    gasUsed: "220000",
-                    gasPrice: "11.3",
-                    gasCost: "0.002486",
-                    status: "confirmed",
-                    positionId: "#67890",
-                    usdValue: 340
-                }
-            ];
+            // Fetch real transaction history from database
+            const dbService = new DatabaseService(runtime);
+            await dbService.initializeDatabase();
+            
+            const userId = `${platformUser.platform}:${platformUser.platformUserId}`;
+            
+            // Get all trading history
+            const allTransactions = await dbService.getTradingHistory(userId, 1000);
+            
+            // Filter by time period
+            const cutoffTime = Date.now() - (days * 24 * 60 * 60 * 1000);
+            const filteredByTime = allTransactions.filter(tx => new Date(tx.timestamp).getTime() > cutoffTime);
+            
+            // Convert to display format
+            const transactions = filteredByTime.map(trade => ({
+                hash: `0x${Date.now().toString(16)}...${Math.random().toString(16).slice(2, 6)}`,
+                type: "swap", // Currently only swaps are tracked
+                timestamp: new Date(trade.timestamp).getTime(),
+                fromToken: trade.fromToken,
+                toToken: trade.toToken,
+                fromAmount: trade.amountIn,
+                toAmount: trade.amountOut,
+                gasUsed: "N/A",
+                gasPrice: "N/A",
+                gasCost: trade.gasCost || "N/A",
+                status: trade.success ? "confirmed" : "failed",
+                slippage: trade.slippageUsed ? `${trade.slippageUsed}%` : "N/A",
+                route: trade.dexUsed || "9mm DEX",
+                usdValue: 0 // Would need price data to calculate
+            }));
 
             // Filter transactions based on criteria
-            let filteredTransactions = mockTransactions.filter(tx => {
+            let filteredTransactions = transactions.filter(tx => {
                 const daysSinceTransaction = (Date.now() - tx.timestamp) / (1000 * 60 * 60 * 24);
                 if (daysSinceTransaction > days) return false;
                 

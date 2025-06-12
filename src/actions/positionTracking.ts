@@ -39,7 +39,39 @@ const positionTrackingAction: Action = {
         try {
             const text = message.content?.text?.toLowerCase() || '';
             
-            // Mock position data (in production, fetch from subgraph + calculate metrics)
+            // Position tracking is coming soon
+            const positionsAvailable = false;
+            
+            if (!positionsAvailable) {
+                if (callback) {
+                    callback({
+                        text: `📊 **Position Tracking**
+
+⚠️ **Coming Soon!**
+
+Position tracking for liquidity provider (LP) positions is under development.
+
+**What's coming:**
+• Real-time LP position monitoring
+• Fees earned tracking
+• Impermanent loss calculations
+• Performance analytics
+• Price range monitoring
+• APY calculations
+
+**Currently Available:**
+• Price monitoring for tokens
+• Trading history tracking
+• Portfolio overview
+• Swap execution
+
+Stay tuned for comprehensive LP position tracking!`
+                    });
+                }
+                return true;
+            }
+            
+            // Future implementation will fetch from subgraph
             const mockPositions = {
                 activeLPPositions: [
                     {

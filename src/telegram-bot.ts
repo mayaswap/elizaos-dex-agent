@@ -104,7 +104,7 @@ I'm your AI-powered trading assistant for the 9mm DEX on PulseChain. Here's what
 • /watchlist - Token watchlist
 • /portfolio - Portfolio overview
 
-💱 *Trading (Demo Mode):*
+💱 *Trading:*
 • /swap - Token swapping
 • /liquidity - Liquidity management
 • /analytics - Trading analytics
@@ -246,14 +246,24 @@ Need help? Type /help for all commands! 🚀`;
                 } else {
                     let walletList = `💼 *Your Wallets (${wallets.length}/5)*\n\n`;
                     
-                    wallets.forEach((wallet, index) => {
+                    for (const [index, wallet] of wallets.entries()) {
                         const shortAddress = `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`;
                         walletList += `${index + 1}. *${wallet.name || `Wallet ${index + 1}`}*\n`;
                         walletList += `   📍 ${shortAddress}\n`;
-                        walletList += `   💰 Balance: PLS 0.00 (Real balance checking)\n`;
+                        
+                        // Fetch real balance
+                        try {
+                            const provider = new ethers.JsonRpcProvider('https://rpc.pulsechain.com');
+                            const balance = await provider.getBalance(wallet.address);
+                            const plsBalance = ethers.formatEther(balance);
+                            walletList += `   💰 Balance: ${parseFloat(plsBalance).toFixed(4)} PLS\n`;
+                        } catch {
+                            walletList += `   💰 Balance: Loading...\n`;
+                        }
+                        
                         if (wallet.isActive) walletList += `   ✅ *Active Wallet*\n`;
                         walletList += `\n`;
-                    });
+                    }
 
                     walletList += `⚙️ *Wallet Actions:*\n`;
                     walletList += `• /create_wallet - Create new wallet\n`;
@@ -566,7 +576,7 @@ Type: \`/set_alert PLS above 0.001\`
 • [DexScreener](https://dexscreener.com)
 
 💡 *Version:* 1.0.0 - Production Ready
-🔄 *Status:* Demo Mode (Trading simulation)
+🔄 *Status:* Live Trading on PulseChain
 
 Need help? Type /help for commands! 🚀`;
 

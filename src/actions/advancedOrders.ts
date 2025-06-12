@@ -47,8 +47,39 @@ const advancedOrdersAction: Action = {
             else if (text.includes('take profit') || text.includes('target')) orderType = 'take_profit';
             else if (text.includes('monitor') || text.includes('watch')) orderType = 'monitor';
 
-            // Mock active orders (in production, stored in database)
-            const mockOrders = {
+                            // Advanced orders coming soon
+                const advancedOrdersAvailable = false;
+                
+                if (!advancedOrdersAvailable) {
+                    if (callback) {
+                        callback({
+                            text: `📊 **Advanced Orders**
+
+⚠️ **Coming Soon!**
+
+Advanced order functionality is under development.
+
+**What's coming:**
+• Stop Loss orders
+• Take Profit orders
+• DCA (Dollar Cost Averaging)
+• Price Alerts with automatic execution
+• Multi-condition orders
+
+**Currently Available:**
+• Manual swap execution
+• Price alerts (notification only)
+• Portfolio tracking
+• Trading history
+
+Advanced orders will enable automated trading strategies. Stay tuned!`
+                        });
+                    }
+                    return true;
+                }
+                
+                // Future implementation
+                const mockOrders = {
                 activeOrders: [
                     {
                         id: 'order_001',
