@@ -33,14 +33,26 @@ class ElizaOSTelegramBot {
         this.bot = new TelegramBot(token, { polling: true });
         
         // Create data directory
-        const dataDir = './data';
+        const dataDir = process.env.NODE_ENV === 'production' ? '/tmp/data' : './data';
         if (!fs.existsSync(dataDir)) {
             fs.mkdirSync(dataDir, { recursive: true });
+            console.log(`📁 Created data directory: ${dataDir}`);
         }
 
         // Create SQLite database
-        const dbPath = process.env.SQLITE_FILE || './data/elizaos_dex.db';
-        const db = new Database(dbPath);
+        const dbPath = process.env.SQLITE_FILE || `${dataDir}/elizaos_dex.db`;
+        console.log(`📊 Initializing database at: ${dbPath}`);
+        
+        let db;
+        try {
+            db = new Database(dbPath);
+            console.log('✅ SQLite database connection established');
+        } catch (error) {
+            console.error('❌ SQLite database connection failed:', error);
+            // Fallback to in-memory database
+            db = new Database(':memory:');
+            console.log('⚠️ Using in-memory database as fallback');
+        }
         
         // Create runtime with database
         const runtime = {
@@ -676,7 +688,12 @@ Need help? Type /help for commands! 🚀`;
                 walletName = nameMatch[1].trim();
             }
 
+            console.log(`🔧 Attempting to create wallet for user: ${platformUser.platformUserId}`);
+            console.log(`📝 Wallet name: ${walletName || 'Auto-generated'}`);
+
             const newWallet = await this.walletService.createWallet(platformUser, walletName);
+            
+            console.log(`✅ Wallet created successfully: ${newWallet.address}`);
             
             const successMessage = `✅ *Perfect! Your wallet has been created!*
 
@@ -700,11 +717,20 @@ Just talk to me naturally - I understand! 🚀`;
             this.bot.sendMessage(chatId, successMessage, { parse_mode: 'Markdown' });
             
         } catch (error: any) {
-            console.error('Natural wallet creation error:', error);
-            if (error.message.includes('Maximum 5 wallets')) {
+            console.error('❌ DETAILED WALLET CREATION ERROR:', error);
+            console.error('Error stack:', error.stack);
+            console.error('Error message:', error.message);
+            
+            if (error.message && error.message.includes('Maximum 5 wallets')) {
                 this.bot.sendMessage(chatId, '❌ You already have 5 wallets (the maximum). Would you like me to show them to you, or would you prefer to delete one first?');
             } else {
-                this.bot.sendMessage(chatId, '❌ I had trouble creating your wallet. Let me try again - sometimes it takes a moment. Would you like me to retry?');
+                const detailedError = `❌ I encountered an error creating your wallet.
+
+**Error details:** ${error.message || 'Unknown error'}
+
+This might be a temporary issue. Let me know if you'd like me to try again, or if you need help with something else!`;
+                
+                this.bot.sendMessage(chatId, detailedError, { parse_mode: 'Markdown' });
             }
         }
     }
