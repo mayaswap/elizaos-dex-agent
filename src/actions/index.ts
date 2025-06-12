@@ -50,8 +50,8 @@ export const allActions = async () => {
         priceAction,
         balanceAction,
         portfolioAction,
-        walletAction,
-        walletV2Action,
+        // walletAction, // REMOVED: Legacy wallet action to prevent conflicts
+        walletV2Action, // Primary wallet system
         addLiquidityAction,
         removeLiquidityAction,
         queryPoolsAction,
@@ -64,7 +64,7 @@ export const allActions = async () => {
         positionTrackingAction,
         advancedOrdersAction,
         startMonitoringAction,
-        walletManagementAction,
+        walletManagementAction, // Advanced wallet management 
         tradingAnalyticsAction,
         priceAlertsAction,
         watchlistsAction

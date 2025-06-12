@@ -4,6 +4,7 @@ import { POPULAR_TOKENS } from '../config/chains.js';
 // Simple cache to avoid multiple AI calls for the same input
 const parseCache = new Map<string, { result: ParsedCommand; timestamp: number }>();
 const CACHE_DURATION = 5000; // 5 seconds
+const MAX_CACHE_SIZE = 100; // Maximum cache entries to prevent memory leaks
 
 /**
  * Enhanced Natural Language Command Parser
@@ -318,6 +319,25 @@ export async function parseCommand(input: string): Promise<ParsedCommand> {
   }
   
   const result = parseWithRegex(input);
+  
+  // Cache cleanup to prevent memory leaks
+  if (parseCache.size >= MAX_CACHE_SIZE) {
+    const now = Date.now();
+    // Remove expired entries first
+    for (const [key, value] of parseCache.entries()) {
+      if (now - value.timestamp > CACHE_DURATION) {
+        parseCache.delete(key);
+      }
+    }
+    
+    // If still over limit, remove oldest entries
+    if (parseCache.size >= MAX_CACHE_SIZE) {
+      const entries = Array.from(parseCache.entries());
+      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toRemove = entries.slice(0, Math.floor(MAX_CACHE_SIZE / 2));
+      toRemove.forEach(([key]) => parseCache.delete(key));
+    }
+  }
   
   // Cache the result
   parseCache.set(input, { result, timestamp: Date.now() });

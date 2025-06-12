@@ -477,7 +477,18 @@ export class WalletService {
 export function createPlatformUser(runtime: IAgentRuntime, message: any): PlatformUser {
     // Extract platform information from message context
     const platform = message.platform || 'web';
-    const platformUserId = message.userId || message.user?.id || 'default';
+    
+    // CRITICAL: Generate unique user ID if missing to prevent wallet collisions
+    let platformUserId = message.userId || message.user?.id;
+    
+    if (!platformUserId) {
+        // Generate unique ID based on message properties and timestamp
+        const messageId = message.id || message.messageId || Date.now();
+        const chatId = message.chatId || message.channelId || 'unknown';
+        platformUserId = `anonymous_${platform}_${chatId}_${messageId}_${Math.random().toString(36).substr(2, 9)}`;
+        elizaLogger.warn(`⚠️ Generated anonymous user ID: ${platformUserId} - Consider implementing proper user authentication`);
+    }
+    
     const platformUsername = message.user?.username || message.username;
     const displayName = message.user?.displayName || message.user?.name;
 

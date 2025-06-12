@@ -11,7 +11,7 @@ import { parseCommand } from '../utils/parser.js';
 import { WalletService, createPlatformUser } from '../services/walletService.js';
 
 const walletAction: Action = {
-    name: "WALLET_MANAGEMENT",
+    name: "WALLET_LEGACY",
     similes: [
         "CREATE_WALLET",
         "GENERATE_WALLET", 
