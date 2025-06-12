@@ -7,7 +7,7 @@
  * to provide Telegram bot functionality.
  */
 
-import TelegramBot from 'node-telegram-bot-api';
+import TelegramBot, { Message } from 'node-telegram-bot-api';
 import dotenv from 'dotenv';
 import { ethers } from 'ethers';
 import { WalletService, PlatformUser } from './services/walletService.js';
@@ -19,6 +19,18 @@ import { generateCharacterResponse, enhanceResponseWithPersonality } from './uti
 
 // Load environment variables
 dotenv.config();
+
+// Types for bot events
+interface BotMessage extends Message {
+    from?: {
+        id: number;
+        first_name?: string;
+    };
+    chat: {
+        id: number;
+    };
+    text?: string;
+}
 
 class ElizaOSTelegramBot {
     private bot: TelegramBot;
@@ -84,7 +96,7 @@ class ElizaOSTelegramBot {
 
     private setupHandlers() {
         // Start command
-        this.bot.onText(/\/start/, (msg) => {
+        this.bot.onText(/\/start/, (msg: BotMessage) => {
             const chatId = msg.chat.id;
             const userName = msg.from?.first_name || 'trader';
             

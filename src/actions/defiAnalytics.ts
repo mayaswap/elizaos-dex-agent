@@ -88,8 +88,10 @@ Sorry, I couldn't retrieve market data from the 9mm subgraph right now.
 
 🔝 **Top Pools by TVL**:
 ${overview.topPools.map((pool, i) => {
-    return `${i + 1}. **${pool.pair}**: $${(pool.tvl / 1e6).toFixed(2)}M TVL
-   Volume: $${(pool.volume24h / 1e3).toFixed(1)}K | Fee: ${pool.feeTier / 10000}%`;
+    const apy = pool.poolDayData && pool.poolDayData.length > 0 
+        ? (pool.poolDayData.reduce((sum, day) => sum + parseFloat(day.feesUSD), 0) * 365 / parseFloat(pool.totalValueLockedUSD)) * 100
+        : 0;
+    return `${i + 1}. **${pool.pair}**: $${(pool.tvl / 1e6).toFixed(2)}M TVL - ${apy.toFixed(1)}% APY`;
 }).join('\n')}
 
 📈 **Data Source**: Real-time from 9mm V3 Subgraph
@@ -107,8 +109,13 @@ ${overview.topPools.map((pool, i) => {
 
 🏊 **Top Pools by Volume & APY**:
 ${trending.pools.map((pool, i) => {
+    const volume24h = parseFloat(pool.volumeUSD);
+    const tvl = parseFloat(pool.totalValueLockedUSD);
+    const apy = pool.poolDayData && pool.poolDayData.length > 0 
+        ? (pool.poolDayData.reduce((sum, day) => sum + parseFloat(day.feesUSD), 0) * 365 / tvl) * 100
+        : 0;
     return `${i + 1}. **${pool.pair}** (${pool.chain})
-   Est. APY: ${pool.apy.toFixed(1)}% | TVL: $${(pool.tvl / 1e6).toFixed(1)}M | Vol: $${(pool.volume24h / 1e6).toFixed(1)}M`;
+   Est. APY: ${apy.toFixed(1)}% | TVL: $${tvl.toLocaleString()} | Vol: $${volume24h.toLocaleString()}M`;
 }).join('\n')}
 
 🎯 **Pool Opportunities**:
@@ -131,15 +138,16 @@ ${trending.pools.map((pool, i) => {
 💰 **Top APY Pools** (Updated real-time):
 ${yield_data.opportunities.map((opp, i) => {
     const riskColor = opp.risk === 'Low' ? '🟢' : opp.risk === 'Medium' ? '🟡' : '🔴';
+    const apy = opp.apy || 0;
     return `${i + 1}. **${opp.pair}** on ${opp.protocol}
-   APY: ${opp.apy.toFixed(1)}% | Risk: ${riskColor} ${opp.risk} | Chain: ${opp.chain}
-   Min Deposit: $${opp.minDeposit} | Est. Daily: $${((opp.minDeposit * opp.apy / 100) / 365).toFixed(2)}`;
+   APY: ${apy.toFixed(1)}% | Risk: ${riskColor} ${opp.risk} | Chain: ${opp.chain}
+   Min Deposit: $${opp.minDeposit} | Est. Daily: $${((opp.minDeposit * apy / 100) / 365).toFixed(2)}`;
 }).join('\n')}
 
 📊 **Yield Strategy Recommendations**:
-• **Conservative**: ${yield_data.opportunities.filter(o => o.risk === 'Low')[0]?.pair} (${yield_data.opportunities.filter(o => o.risk === 'Low')[0]?.apy.toFixed(1)}% APY)
-• **Balanced**: ${yield_data.opportunities.filter(o => o.risk === 'Medium')[0]?.pair} (${yield_data.opportunities.filter(o => o.risk === 'Medium')[0]?.apy.toFixed(1)}% APY)  
-• **Aggressive**: ${yield_data.opportunities.filter(o => o.risk === 'High')[0]?.pair} (${yield_data.opportunities.filter(o => o.risk === 'High')[0]?.apy.toFixed(1)}% APY)
+• **Conservative**: ${yield_data.opportunities.filter(o => o.risk === 'Low')[0]?.pair} (${yield_data.opportunities.filter(o => o.risk === 'Low')[0]?.apy?.toFixed(1) || '0'}% APY)
+• **Balanced**: ${yield_data.opportunities.filter(o => o.risk === 'Medium')[0]?.pair} (${yield_data.opportunities.filter(o => o.risk === 'Medium')[0]?.apy?.toFixed(1) || '0'}% APY)  
+• **Aggressive**: ${yield_data.opportunities.filter(o => o.risk === 'High')[0]?.pair} (${yield_data.opportunities.filter(o => o.risk === 'High')[0]?.apy?.toFixed(1) || '0'}% APY)
 
 ⚠️ **Risk Assessment**:
 • High APY often means higher impermanent loss risk

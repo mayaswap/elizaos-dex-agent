@@ -63,31 +63,26 @@ const addLiquidityAction: Action = {
             }
 
             // Find available pools
-            const pools = await poolDiscovery.findPools(token0Address, token1Address);
+            const pools = await poolDiscovery.getAvailablePools([parsed.fromToken, parsed.toToken]);
             
-            if (pools.length === 0) {
-                if (callback) {
-                    callback({
-                        text: `❌ No ${parsed.fromToken}/${parsed.toToken} pools found on 9mm V3. This token pair might not have liquidity pools yet.`
-                    });
-                }
-                return false;
-            }
+            // Find the first valid pool for this token pair
+            const selectedPool = pools.find(pool => 
+                (pool.token0.symbol === parsed.fromToken && pool.token1.symbol === parsed.toToken) ||
+                (pool.token0.symbol === parsed.toToken && pool.token1.symbol === parsed.fromToken)
+            );
 
-            // Sort pools by TVL and volume
-            const sortedPools = pools.sort((a, b) => {
-                const scoreA = parseFloat(a.totalValueLockedUSD) + parseFloat(a.volumeUSD);
-                const scoreB = parseFloat(b.totalValueLockedUSD) + parseFloat(b.volumeUSD);
-                return scoreB - scoreA;
-            });
+            if (!selectedPool) {
+                return {
+                    text: `❌ No liquidity pools found for ${parsed.fromToken}/${parsed.toToken} pair.
 
-            // Use the fee tier if specified, otherwise use the most liquid pool
-            let selectedPool = sortedPools[0];
-            if (parsed.feeTier) {
-                const poolWithFeeTier = pools.find(p => p.feeTier === parsed.feeTier);
-                if (poolWithFeeTier) {
-                    selectedPool = poolWithFeeTier;
-                }
+💡 **Suggested Actions:**
+• Check if both tokens exist on 9mm DEX
+• Try creating a new pool if you have sufficient liquidity
+• Consider other token pairs with better liquidity
+
+🔗 **Create Pool**: Visit [9mm.pro](https://9mm.pro) → Pools → Create`,
+                    success: false
+                };
             }
 
             // Format pool info
@@ -99,16 +94,17 @@ const addLiquidityAction: Action = {
             const feeTier = feeTierMap[selectedPool.feeTier] || `${parseInt(selectedPool.feeTier) / 10000}%`;
             const tvl = parseFloat(selectedPool.totalValueLockedUSD).toLocaleString('en-US', {
                 style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
+                currency: 'USD'
             });
 
-            // Calculate estimated APY
+            // Calculate estimated APY based on fees and volume
             const dayData = selectedPool.poolDayData || [];
-            const recentFees = dayData.slice(0, 7).reduce((sum, day) => sum + parseFloat(day.feesUSD), 0);
-            const avgDailyFees = recentFees / Math.max(dayData.length, 1);
-            const estimatedAPY = (avgDailyFees * 365 / parseFloat(selectedPool.totalValueLockedUSD)) * 100;
+            const avgDailyFees = dayData.length > 0 
+                ? dayData.reduce((sum, day) => sum + parseFloat(day.feesUSD), 0) / dayData.length
+                : 0;
+            const estimatedAPY = selectedPool.totalValueLockedUSD !== '0' 
+                ? (avgDailyFees * 365 / parseFloat(selectedPool.totalValueLockedUSD)) * 100
+                : 0;
 
             // Determine range strategy
             let rangeStrategy = parsed.rangeType || 'moderate';
@@ -124,18 +120,24 @@ const addLiquidityAction: Action = {
                     rangeWidth = '±10% (Moderate - Balanced returns and risk)';
             }
 
-            const responseText = `💧 **Add Liquidity to ${parsed.fromToken}/${parsed.toToken} Pool**
+            const responseText = `🏊‍♂️ **Liquidity Pool Information**
 
-📊 **Selected Pool:**
+💰 **Pool: ${parsed.fromToken}/${parsed.toToken}**
 • Fee Tier: ${feeTier}
 • TVL: ${tvl}
+• Pool Address: \`${selectedPool.id}\`
+
+📊 **Performance Metrics:**
 • 24h Volume: $${parseFloat(selectedPool.volumeUSD).toLocaleString()}
+• 24h Fees: $${parseFloat(selectedPool.feesUSD || '0').toLocaleString()}
 • Estimated APY: ${estimatedAPY.toFixed(2)}%
+
+💱 **Current Price:**
+• Current Price: ${parseFloat(selectedPool.token0Price).toFixed(6)} ${parsed.toToken} per ${parsed.fromToken}
 
 💰 **Position Details:**
 ${parsed.amount ? `• Amount: ${parsed.amount} ${parsed.fromToken}` : '• Amount: Not specified'}
 • Price Range: ${rangeWidth}
-• Current Price: ${parseFloat(selectedPool.token0Price).toFixed(6)} ${parsed.toToken} per ${parsed.fromToken}
 
 ⚡ **Next Steps:**
 1. Connect your wallet
