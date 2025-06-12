@@ -100,28 +100,28 @@ class ElizaOSTelegramBot {
             const chatId = msg.chat.id;
             const userName = msg.from?.first_name || 'trader';
             
-            const welcomeMessage = `🚀 *Hey ${userName}! Welcome to DEX Master!*
+            const welcomeMessage = `🔥 *Well well, look who finally showed up... ${userName}!*
 
-I'm your specialized AI trading companion for PulseChain and 9mm DEX. Think of me as your personal DeFi expert who never sleeps! 💪
+DEX Master here - your new alpha source who's about to transform your trading game from amateur hour to elite status. 💎
 
-Here's how I can supercharge your trading:
+While other bots give you basic shit, I deliver REAL alpha:
 
-💎 *Quick Start Commands:*
-• "What's the price of HEX?" - Real-time prices
-• "Create a wallet" - Secure wallet setup
-• "Show my balance" - Portfolio overview
-• "Help" - See all my capabilities
+⚡ *Get Started Like a Pro:*
+• "What's the price of HEX?" - See what smart money tracks
+• "Create a wallet" - Forge some diamond hands
+• "Show my balance" - Reality check your portfolio  
+• "Help" - Witness my full trading arsenal
 
-🔥 *My Specialties:*
-• 📊 Real-time market analysis
-• 💼 Bank-grade wallet security (AES-256)
-• 🔄 Smart swap execution
-• 📈 Portfolio tracking & analytics
-• 🔔 Price alerts that never miss
+💀 *Why I'm Different:*
+• 📊 Price data before it hits your timeline
+• 🛡️ Security tighter than Fort Knox (AES-256)
+• 🚀 Trading execution that doesn't get rekt
+• 📈 Portfolio tracking with brutal honesty
+• 🔔 Alerts that actually make you money
 
-💬 *Pro Tip:* Just talk to me naturally! No need to memorize commands. Try saying "Hi" or asking about any token!
+💰 *Pro Move:* Just talk naturally, chief. I'm not some basic chatbot that needs baby commands. Try "yo what's good" or roast me about any token!
 
-Ready to explore the markets together? What interests you most? 🎯`;
+Ready to level up from degen to alpha trader? What's your first move, anon? 😈`;
 
             this.bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
         });
@@ -129,46 +129,36 @@ Ready to explore the markets together? What interests you most? 🎯`;
         // Help command
         this.bot.onText(/\/help/, (msg: any) => {
             const chatId = msg.chat.id;
-            const helpMessage = `📋 *Available Commands:*
+            const helpMessage = `💰 *Oh, you want to see what separates the pros from the amateurs? Buckle up:*
 
-*💰 Wallet Management (REAL):*
-/wallet - Wallet management
-/create_wallet [name] - Create new wallet
-/import_wallet <private_key> - Import wallet
-/import_mnemonic "phrase" - Import from seed
-/balance - Check real balances
-/export_wallet - Export wallet
-/switch_wallet - Switch active wallet
+*🔥 Trading Arsenal:*
+/wallet - Manage your diamond hands storage
+/create_wallet [name] - Forge a new secure wallet
+/import_wallet <key> - Import existing wallet (don't leak it)
+/balance - Reality check your portfolio
+/price <token> - Price data before you even ask
 
-*📊 Market Data:*
-/price <token> - Token price (e.g., /price PLS)
-/chart <token> - Price charts
-/volume <token> - Trading volume
-/trending - Trending tokens
+*💎 Alpha Intelligence:*
+/alerts - Price alerts that actually matter
+/watchlist - Track gems before they moon
+/analytics - See how bad (or good) you're doing
+/history - Your trading mistakes and wins
+/trending - What smart money is watching
 
-*🔔 Monitoring:*
-/alerts - Price alerts management
-/watchlist - Token watchlist
-/notifications - Notification settings
+*⚡ Advanced Plays:*
+/swap - Execute trades without getting rekt
+/liquidity - LP strategies that print money
+/slippage - Fine-tune like a professional
+/gas - Optimize fees (because I'm not burning money)
 
-*💱 Trading (REAL):*
-/swap - Token swapping
-/liquidity - Add/remove liquidity
-/analytics - Trading performance
-/history - Transaction history
+*🧠 Pro Features:*
+/settings - Configure your trading style
+/notifications - Alert preferences
+/support - When you need my wisdom
 
-*⚙️ Settings:*
-/settings - Bot preferences
-/slippage - Slippage tolerance
-/gas - Gas price settings
+💀 *Real Talk:* Everything here ACTUALLY works - no demo bullshit. Your wallets are real, trades are real, money is real.
 
-*📚 Help:*
-/about - About this bot
-/support - Get support
-
-🔥 *All wallet features are now REAL and functional!* 🔥
-
-Type any command to explore the features! 🚀`;
+Most people use 10% of what I can do. Which 10% are you, anon? 😈`;
 
             this.bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
         });
@@ -1291,16 +1281,17 @@ Which token price are you interested in? 💎`;
         }
         
         // Generic helpful response for unclear queries
-        const genericResponse = `🤔 **I'm not quite sure what you're looking for, but I'm here to help!**
+        const genericResponse = `🤔 **Bro, you're speaking gibberish. I'm smart, but not psychic...**
 
-**Popular commands:**
-• "What's my wallet?" - Wallet info
-• "Check balance" - See your tokens
-• "Price of HEX" - Token prices
-• "Help" - Full command list
+**Popular moves for beginners:**
+• "What's my wallet?" - Show your diamond hands storage
+• "Check balance" - Reality check your portfolio
+• "Price of HEX" - See what smart money tracks
+• "Help" - Witness my full arsenal
 
-**Or just tell me what you want to do - I understand natural language!** 
-For example: "I want to check token prices" or "Show me my wallet details" 💬`;
+**Pro tip:** Just talk normally, chief. I don't need baby commands. Try "yo what's good" or "show me some alpha" 💰
+
+What do you actually WANT to do, anon? 😈`;
 
         this.bot.sendMessage(chatId, genericResponse, { parse_mode: 'Markdown' });
     }
