@@ -883,11 +883,11 @@ Once you have a wallet, I can show you balances for PLS, HEX, USDC, and more! �
                     const price = priceData.data;
                     const changeEmoji = price.change24h >= 0 ? '📈' : '📉';
                     
-                    const response = `💰 **${token} is currently $${price.price}**
+                    const response = `💰 ${token} is currently $${price.price}
 
-${changeEmoji} 24h change: ${price.change24h.toFixed(2)}%
-💧 Liquidity: $${price.liquidity.toLocaleString()}
-📊 Volume: $${price.volume24h.toLocaleString()}
+${changeEmoji} 24h change: ${price.change24h ? price.change24h.toFixed(2) : 'N/A'}%
+💧 Liquidity: $${price.liquidity ? price.liquidity.toLocaleString() : 'N/A'}
+📊 Volume: $${price.volume24h ? price.volume24h.toLocaleString() : 'N/A'}
 
 Want to know anything else? Try asking:
 • "What about HEX price?"
