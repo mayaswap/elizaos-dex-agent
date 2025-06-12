@@ -8,7 +8,7 @@ import type {
     Content
 } from '@elizaos/core';
 import { parseCommand } from '../utils/parser.js';
-import { WalletStorage } from '../utils/wallet-storage.js';
+import { WalletService, createPlatformUser } from '../services/walletService.js';
 
 const walletAction: Action = {
     name: "WALLET_MANAGEMENT",
@@ -50,67 +50,53 @@ const walletAction: Action = {
                 // Check for specific wallet commands
                 const lowerText = userMessage.toLowerCase();
                 
-                // First check if user already has a wallet
-                const storage = WalletStorage.getInstance();
-                const existingWallet = storage.getWallet(message.userId);
+                // Create platform user and check for existing wallets
+                const platformUser = createPlatformUser(runtime, message);
+                const walletService = new WalletService(runtime);
+                
+                let existingWallet: any = null;
+                try {
+                    const activeWallet = await walletService.getActiveWallet(platformUser);
+                    if (activeWallet) {
+                        existingWallet = activeWallet;
+                    }
+                } catch (error) {
+                    console.log('No existing wallet found:', error);
+                }
                 
                 if (lowerText.includes('create') || lowerText.includes('generate') || lowerText.includes('new')) {
-                    // Generate new wallet
-                    const wallet = ethers.Wallet.createRandom();
-                    
-                    // Store wallet in persistent storage
+                    // Create new wallet using the new WalletService
                     try {
-                        const storage = WalletStorage.getInstance();
+                        const newWallet = await walletService.createWallet(platformUser);
                         
-                        // Save to persistent storage
-                        if (message.userId) {
-                            storage.saveWallet(message.userId, {
-                                address: wallet.address,
-                                privateKey: wallet.privateKey
-                            });
-                        }
-                        
-                        // Also store in runtime for session performance
-                        if (runtime && message.userId) {
-                            (runtime as any).userWallets = (runtime as any).userWallets || {};
-                            (runtime as any).userWallets[message.userId] = {
-                                address: wallet.address,
-                                privateKey: wallet.privateKey,
-                                createdAt: Date.now()
-                            };
-                        }
-                        
-                        const storageInfo = storage.getStorageInfo();
-                        console.log(`📁 Wallet storage location: ${storageInfo.location}`);
-                    } catch (error) {
-                        console.log('Could not store wallet, continuing...', error);
-                    }
-                    
-                    responseText = `🎉 **New Wallet Created Successfully!**
+                        responseText = `🎉 **New Wallet Created Successfully!**
 
-**Wallet Address:** \`${wallet.address}\`
-**Private Key:** \`${wallet.privateKey}\`
+**Wallet Address:** \`${newWallet.address}\`
+**Wallet Name:** ${newWallet.name}
+**Platform:** ${newWallet.platform}
 
 ⚠️ **IMPORTANT SECURITY NOTES:**
-• Save your private key in a secure location
-• Never share your private key with anyone
-• This wallet is not yet funded - you'll need to transfer tokens to it
-• Keep your private key safe - there's no way to recover it if lost
+• Your private key is encrypted with AES-256 and stored securely
+• Use the telegram bot to manage your wallet safely
+• This wallet is ready for real transactions
+• Never share your wallet access with anyone
 
 🚀 **Next Steps:**
-1. Save this information securely
-2. Fund your wallet with tokens
-3. Start trading with commands like "swap 100 USDC for WPLS"
+1. Fund your wallet by sending tokens to the address above
+2. Use "check my balance" to see your tokens
+3. Start trading with natural language commands
 
 *This wallet works across PulseChain, Base Chain, and other EVM networks.*
-*✅ I've saved your wallet for future use - it will persist even after restarting!*
+*✅ Your wallet is securely stored with military-grade encryption!*
 
-📁 **Wallet Storage Location:**
-Your wallet is saved at: \`${WalletStorage.getInstance().getStorageLocation()}\`
-• Main file: \`wallet-store.json\`
-• Backup file: \`wallet-${message.userId}-${wallet.address}.json\`
+**Recovery:** Your wallet is safely stored in our encrypted database system.`;
+                    } catch (error: any) {
+                        responseText = `❌ **Wallet Creation Failed**
 
-**Recovery:** If you need to recover your wallet, check the above directory.`;
+${error.message || 'Unknown error occurred'}
+
+Please try again or use the telegram bot for reliable wallet creation.`;
+                    }
 
                 } else if (lowerText.includes('connect')) {
                     responseText = `🔗 **Wallet Connection Guide**
@@ -134,21 +120,22 @@ To connect your existing wallet, you have a few options:
                 } else {
                     // Check if they're asking about their wallet
                     if (existingWallet && (lowerText.includes('my wallet') || lowerText.includes('what is my') || lowerText.includes('show my'))) {
-                        responseText = `💼 **Your Stored Wallet**
+                        responseText = `💼 **Your Active Wallet**
 
 **Wallet Address:** \`${existingWallet.address}\`
+**Wallet Name:** ${existingWallet.name}
 **Created:** ${new Date(existingWallet.createdAt).toLocaleString()}
 
-📁 **Storage Location:** \`${storage.getStorageLocation()}\`
+🔐 **Security:** AES-256 encrypted database storage
 
 ✅ Your wallet is safely stored and will persist across sessions!
 
 **Options:**
 • "What's my balance" - Check your token balances
-• "Create a new wallet" - Replace with a new wallet
-• "Show my private key" - View your private key (be careful!)
+• "Create a new wallet" - Add another wallet
+• Use the telegram bot for full wallet management
 
-⚠️ **Note:** Your private key is stored locally at the above location.`;
+⚠️ **Note:** Your private key is encrypted and secure in our database.`;
                     } else {
                         responseText = `💼 **Wallet Management Options**
 
