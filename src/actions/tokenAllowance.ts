@@ -20,7 +20,7 @@ const tokenAllowanceAction: Action = {
     ],
     description: "Manage ERC20 token allowances - check, set, or revoke spending permissions for DEX contracts",
     validate: async (runtime: IAgentRuntime, message: Memory) => {
-        const text = message.content.text.toLowerCase();
+        const text = message.content?.text?.toLowerCase() || '';
         
         const allowanceKeywords = [
             'allowance', 'approval', 'approve', 'revoke', 'spending limit',
@@ -38,7 +38,7 @@ const tokenAllowanceAction: Action = {
         callback?: HandlerCallback
     ) => {
         try {
-            const text = message.content.text.toLowerCase();
+            const text = message.content?.text?.toLowerCase() || '';
             
             // Parse command type
             let action = 'check';

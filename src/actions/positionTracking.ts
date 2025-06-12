@@ -19,7 +19,7 @@ const positionTrackingAction: Action = {
     ],
     description: "Track and analyze liquidity provider positions, performance, and profit/loss",
     validate: async (runtime: IAgentRuntime, message: Memory) => {
-        const text = message.content.text.toLowerCase();
+        const text = message.content?.text?.toLowerCase() || '';
         
         const positionKeywords = [
             'position', 'lp', 'liquidity', 'performance', 'profit', 'loss',
@@ -37,7 +37,7 @@ const positionTrackingAction: Action = {
         callback?: HandlerCallback
     ) => {
         try {
-            const text = message.content.text.toLowerCase();
+            const text = message.content?.text?.toLowerCase() || '';
             
             // Mock position data (in production, fetch from subgraph + calculate metrics)
             const mockPositions = {

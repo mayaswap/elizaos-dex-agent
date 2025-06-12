@@ -158,6 +158,8 @@ I can help you with:
                 } as Content);
             }
 
+            return true;
+
         } catch (error) {
             console.error('Wallet action error:', error);
             const errorText = `❌ **Wallet Error**
@@ -174,6 +176,8 @@ Sorry, I encountered an error while handling your wallet request. Please try aga
                     content: { text: errorText }
                 } as Content);
             }
+            
+            return false;
         }
     },
     examples: [
