@@ -623,6 +623,12 @@ Need help? Type /help for commands! 🚀`;
                     return;
                 }
 
+                // Intent: Show full address
+                if (this.isShowFullAddressIntent(userMessage)) {
+                    await this.handleShowFullAddressNaturally(chatId, platformUser);
+                    return;
+                }
+
                 // Intent: Token price
                 if (this.isPriceIntent(userMessage)) {
                     await this.handlePriceNaturally(chatId, userMessage);
@@ -680,7 +686,21 @@ Need help? Type /help for commands! 🚀`;
     private isWalletInfoIntent(message: string): boolean {
         return (message.includes('wallet') || message.includes('wallets') || 
                message.includes('my address') || message.includes('show wallet')) &&
-               !this.isBalanceIntent(message); // Exclude balance-specific requests
+               !this.isBalanceIntent(message) && // Exclude balance-specific requests
+               !this.isShowFullAddressIntent(message); // Exclude full address requests
+    }
+
+    private isShowFullAddressIntent(message: string): boolean {
+        const showAddressPatterns = [
+            'show me the address',
+            'show the address',
+            'display the address',
+            'get full address',
+            'full address',
+            'show my address',
+            'show address'
+        ];
+        return showAddressPatterns.some(pattern => message.includes(pattern));
     }
 
     private isPriceIntent(message: string): boolean {
@@ -873,12 +893,72 @@ Once you have a wallet, I can show you balances for PLS, HEX, USDC, and more! �
         }
     }
 
+    private async handleShowFullAddressNaturally(chatId: number, platformUser: PlatformUser): Promise<void> {
+        try {
+            const activeWallet = await this.walletService.getActiveWallet(platformUser);
+            
+            if (activeWallet?.address) {
+                const response = `💼 **Your Active Wallet Address**
+
+📋 **Full Address (Click to Copy):**
+\`${activeWallet.address}\`
+
+**Wallet Details:**
+• Name: ${activeWallet.name}
+• Platform: ${activeWallet.platform}
+• Created: ${new Date(activeWallet.createdAt).toLocaleString()}
+
+🔗 **Quick Actions:**
+• Tap/click the address above to copy it
+• "Check my balance" - See all your token balances
+• "Create a new wallet" - Add another wallet
+
+🌐 **Networks Supported:**
+• PulseChain (Primary)
+• Base Chain  
+• Sonic Network
+
+⚡ **Pro Tip:** This same address works on all EVM networks!`;
+
+                this.bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+            } else {
+                const response = `💼 **No Active Wallet Found**
+
+You don't have a wallet set up yet! Let me help you:
+
+🆕 **Create New Wallet:**
+• Say: "Create a wallet for me"
+• I'll generate a secure wallet instantly
+
+🔗 **Import Existing Wallet:**
+• Say: "Import wallet with private key [your-key]"
+• Connect your existing wallet
+
+📱 **Quick Setup:**
+• "Create a wallet" - Get started in seconds
+• Your wallet will be encrypted and stored securely
+• Works across Telegram, Discord, and Web
+
+**Once created, I'll remember your wallet for easy access!**`;
+
+                this.bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+            }
+        } catch (error) {
+            console.error('Show address error:', error);
+            this.bot.sendMessage(chatId, '❌ I had trouble retrieving your wallet address. Let me try again in a moment.');
+        }
+    }
+
     private async handlePriceNaturally(chatId: number, message: string): Promise<void> {
-        // Extract token from natural language
-        const tokenMatch = message.match(/\b(pls|hex|usdc|usdt|pulse|dai|weth|btc|eth|plsx)\b/i);
+        // Extract token from natural language - Updated to include 9mm
+        const tokenMatch = message.match(/\b(pls|hex|usdc|usdt|pulse|dai|weth|btc|eth|plsx|9mm|9\s*mm)\b/i);
         
         if (tokenMatch) {
-            const token = tokenMatch[0].toUpperCase();
+            let token = tokenMatch[0].toUpperCase();
+            // Normalize 9mm variations
+            if (token === '9 MM' || token === '9MM') {
+                token = '9MM';
+            }
             
             try {
                 this.bot.sendMessage(chatId, `🔍 Hold tight! Pulling live ${token} data from the blockchain...`);

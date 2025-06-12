@@ -22,6 +22,11 @@ const TOKEN_METADATA: Record<string, { decimals: number; symbol: string }> = {
   'PLSX': { decimals: 18, symbol: 'PLSX' },
   '9MM': { decimals: 18, symbol: '9MM' },
   'WETH': { decimals: 18, symbol: 'WETH' },
+  'WBTC': { decimals: 18, symbol: 'WBTC' },
+  'INC': { decimals: 18, symbol: 'INC' },
+  'LOAN': { decimals: 18, symbol: 'LOAN' },
+  'HEDRON': { decimals: 9, symbol: 'HEDRON' },
+  'ICSA': { decimals: 18, symbol: 'ICSA' },
 };
 
 const priceAction: Action = {
