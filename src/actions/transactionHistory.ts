@@ -8,7 +8,7 @@ import {
     type Action,
 } from "@elizaos/core";
 import { parseCommand } from "../utils/parser.js";
-import { WalletStorage } from "../utils/wallet-storage.js";
+import { WalletService, createPlatformUser } from "../services/walletService.js";
 
 const transactionHistoryAction: Action = {
     name: "TRANSACTION_HISTORY",
@@ -21,7 +21,7 @@ const transactionHistoryAction: Action = {
         "SWAP_HISTORY"
     ],
     validate: async (runtime: IAgentRuntime, message: Memory) => {
-        const text = message.content.text.toLowerCase();
+        const text = message.content?.text?.toLowerCase() || '';
         const historyKeywords = ['history', 'recent', 'past', 'transactions', 'trades', 'activity', 'log'];
         const actionKeywords = ['show', 'get', 'display', 'view', 'list'];
         
@@ -37,10 +37,11 @@ const transactionHistoryAction: Action = {
         callback?: HandlerCallback
     ): Promise<boolean> => {
         try {
-            const text = message.content.text.toLowerCase();
-            const walletStorage = WalletStorage.getInstance();
-            const userWallets = walletStorage.getAllWallets();
-            const walletCount = Object.keys(userWallets).length;
+            const text = message.content?.text?.toLowerCase() || '';
+            const platformUser = createPlatformUser(runtime, message);
+            const walletService = new WalletService(runtime);
+            const userWallets = await walletService.getUserWallets(platformUser);
+            const walletCount = userWallets.length;
 
             if (walletCount === 0) {
                 if (callback) {
