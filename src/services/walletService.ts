@@ -1,6 +1,20 @@
 import { ethers } from 'ethers';
-import { IAgentRuntime, elizaLogger } from '@elizaos/core';
 import crypto from 'crypto';
+import Database from 'better-sqlite3';
+
+// Simple logger
+const elizaLogger = {
+    info: (msg: string) => console.log(`ℹ️ ${msg}`),
+    warn: (msg: string) => console.warn(`⚠️ ${msg}`),
+    error: (msg: string, error?: any) => console.error(`❌ ${msg}`, error || '')
+};
+
+// Simple runtime interface
+interface IAgentRuntime {
+    databaseAdapter?: {
+        db: Database.Database;
+    };
+}
 
 // Platform-specific user identification
 export interface PlatformUser {

@@ -13,6 +13,7 @@ import { WalletService, PlatformUser } from './services/walletService.js';
 import { DatabaseService } from './services/databaseService.js';
 import { PriceService } from './services/priceService.js';
 import Database from 'better-sqlite3';
+import fs from 'fs';
 
 // Load environment variables
 dotenv.config();
@@ -31,11 +32,19 @@ class ElizaOSTelegramBot {
 
         this.bot = new TelegramBot(token, { polling: true });
         
-        // Create a minimal runtime for database and wallet services
+        // Create data directory
+        const dataDir = './data';
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+        }
+
+        // Create SQLite database
+        const dbPath = process.env.SQLITE_FILE || './data/elizaos_dex.db';
+        const db = new Database(dbPath);
+        
+        // Create runtime with database
         const runtime = {
-            databaseAdapter: {
-                db: require('better-sqlite3')(process.env.SQLITE_FILE || './data/elizaos_dex.db')
-            }
+            databaseAdapter: { db }
         } as any;
 
         this.databaseService = new DatabaseService(runtime);
