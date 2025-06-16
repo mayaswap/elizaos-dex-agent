@@ -21,14 +21,14 @@ const gasPriceAction: Action = {
         "GAS_MONITOR"
     ],
     validate: async (runtime: IAgentRuntime, message: Memory) => {
-        const text = message.content.text.toLowerCase();
-        const gasKeywords = ['gas', 'fee', 'fees', 'cost', 'transaction cost', 'network fee'];
+        const text = message.content?.text?.toLowerCase() || '';
+        const gasKeywords = ['gas', 'fees', 'cost', 'transaction cost', 'network fees'];
         const priceKeywords = ['price', 'check', 'current', 'what', 'how much'];
         
         return gasKeywords.some(keyword => text.includes(keyword)) && 
                priceKeywords.some(keyword => text.includes(keyword));
     },
-    description: "Check current gas prices across supported networks for optimal transaction timing",
+    description: "Check current gas prices and network fees on PulseChain and other networks",
     handler: async (
         runtime: IAgentRuntime,
         message: Memory,
@@ -37,7 +37,7 @@ const gasPriceAction: Action = {
         callback?: HandlerCallback
     ): Promise<boolean> => {
         try {
-            const text = message.content.text.toLowerCase();
+            const text = message.content?.text?.toLowerCase() || '';
             
             // Chain configurations
             const chainConfigs = {
@@ -199,11 +199,11 @@ ${gasData.map(data => {
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "What's the current gas price?" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {   
                     text: "I'll check the current gas prices across all supported networks to help you time your transactions optimally.",
                     action: "CHECK_GAS_PRICE"
@@ -212,11 +212,11 @@ ${gasData.map(data => {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Check gas fees on PulseChain" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Let me get the current gas fees for PulseChain and show you transaction cost estimates.",
                     action: "CHECK_GAS_PRICE"
@@ -225,11 +225,11 @@ ${gasData.map(data => {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "How much will this transaction cost?" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll check current gas prices and estimate transaction costs for different operation types.",
                     action: "CHECK_GAS_PRICE"

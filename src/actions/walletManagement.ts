@@ -148,7 +148,7 @@ Please use: "Rename [current name] to [new name]"
                         break;
                     }
 
-                    const currentName = renameMatch[1].trim();
+                    const currentName = renameMatch[1]?.trim();
                     const newName = renameMatch[2].trim();
                     
                     const walletToRename = wallets.find(w => 
@@ -347,11 +347,11 @@ Each wallet has independent trading settings!`;
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "List my wallets" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll show you all your wallets with their names, addresses, and which one is currently active.",
                     action: "WALLET_MANAGEMENT"
@@ -360,11 +360,11 @@ Each wallet has independent trading settings!`;
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Switch to Trading Wallet" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll switch to your Trading Wallet and show you its current settings and configuration.",
                     action: "WALLET_MANAGEMENT"
@@ -373,11 +373,11 @@ Each wallet has independent trading settings!`;
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Rename Wallet 1 to DeFi Wallet" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll rename your wallet from 'Wallet 1' to 'DeFi Wallet' for easier identification.",
                     action: "WALLET_MANAGEMENT"

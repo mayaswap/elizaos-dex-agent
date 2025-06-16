@@ -24,7 +24,12 @@ const addLiquidityAction: Action = {
         "CREATE_POSITION"
     ],
     validate: async (runtime: IAgentRuntime, message: Memory) => {
-        const text = message.content.text;
+        const text = message.content?.text?.toLowerCase() || '';
+        
+        if (!text) {
+            return false;
+        }
+        
         const parsed = await parseCommand(text);
         
         return parsed.intent === 'addLiquidity' && parsed.confidence > 0.6;
@@ -37,7 +42,17 @@ const addLiquidityAction: Action = {
         _options?: { [key: string]: unknown },
         callback?: HandlerCallback
     ): Promise<boolean> => {
-        const text = message.content.text;
+        const text = message.content?.text?.toLowerCase() || '';
+        
+        if (!text) {
+            if (callback) {
+                callback({
+                    text: "❌ No message text provided"
+                });
+            }
+            return false;
+        }
+        
         const parsed = await parseCommand(text);
         
         if (!parsed.fromToken || !parsed.toToken) {
@@ -63,26 +78,34 @@ const addLiquidityAction: Action = {
             }
 
             // Find available pools
-            const pools = await poolDiscovery.getAvailablePools([parsed.fromToken, parsed.toToken]);
+            const pools = await poolDiscovery.getAllAvailablePools({
+                sortBy: 'totalValueLockedUSD',
+                sortDirection: 'desc'
+            });
             
-            // Find the first valid pool for this token pair
-            const selectedPool = pools.find(pool => 
+            // Filter pools for this token pair
+            const filteredPools = pools.filter(pool => 
                 (pool.token0.symbol === parsed.fromToken && pool.token1.symbol === parsed.toToken) ||
                 (pool.token0.symbol === parsed.toToken && pool.token1.symbol === parsed.fromToken)
             );
+            
+            // Find the first valid pool for this token pair
+            const selectedPool = filteredPools[0];
 
             if (!selectedPool) {
-                return {
-                    text: `❌ No liquidity pools found for ${parsed.fromToken}/${parsed.toToken} pair.
+                if (callback) {
+                    callback({
+                        text: `❌ No liquidity pools found for ${parsed.fromToken}/${parsed.toToken} pair.
 
 💡 **Suggested Actions:**
 • Check if both tokens exist on 9mm DEX
 • Try creating a new pool if you have sufficient liquidity
 • Consider other token pairs with better liquidity
 
-🔗 **Create Pool**: Visit [9mm.pro](https://9mm.pro) → Pools → Create`,
-                    success: false
-                };
+🔗 **Create Pool**: Visit [9mm.pro](https://9mm.pro) → Pools → Create`
+                    });
+                }
+                return false;
             }
 
             // Format pool info
@@ -168,11 +191,11 @@ ${parsed.amount ? `• Amount: ${parsed.amount} ${parsed.fromToken}` : '• Amou
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Add liquidity to PLS/USDC pool with 1000 USDC" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {   
                     text: "I'll help you add liquidity to the PLS/USDC pool. Let me find the best pool options for you.",
                     action: "ADD_LIQUIDITY"
@@ -181,11 +204,11 @@ ${parsed.amount ? `• Amount: ${parsed.amount} ${parsed.fromToken}` : '• Amou
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "I want to provide liquidity for HEX and DAI" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll search for HEX/DAI liquidity pools and show you the best options with current APY rates.",
                     action: "ADD_LIQUIDITY"
@@ -194,11 +217,11 @@ ${parsed.amount ? `• Amount: ${parsed.amount} ${parsed.fromToken}` : '• Amou
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Create a concentrated position in WPLS/USDT 1% pool" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll set up a concentrated liquidity position in the WPLS/USDT 1% fee tier pool for maximum capital efficiency.",
                     action: "ADD_LIQUIDITY"

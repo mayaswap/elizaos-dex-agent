@@ -51,10 +51,10 @@ const walletAddressAction: Action = {
     ) => {
         try {
             // Create platform user from message context
-            const platformUser = createPlatformUser(runtime, message);
+            const platformUser = createPlatformUser(runtime as any, message);
             
             // Initialize wallet service
-            const walletService = new WalletService(runtime);
+            const walletService = new WalletService(runtime as any);
             
             let responseText = "";
             
@@ -157,13 +157,13 @@ Sorry, I encountered an error while retrieving your wallet address.
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: {
                     text: "Show my address"
                 }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: {
                     text: "Here's your wallet address: 0x742d35Cc6635C0532925a3b8D357376C326910b2f"
                 }
@@ -171,13 +171,13 @@ Sorry, I encountered an error while retrieving your wallet address.
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: {
                     text: "What's my wallet address?"
                 }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: {
                     text: "Let me display your active wallet address..."
                 }

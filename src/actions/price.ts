@@ -155,11 +155,11 @@ const priceAction: Action = {
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "What's the price of HEX?" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {   
                     text: "Let me check the current HEX price across all DEX pools.",
                     action: "GET_PRICE"
@@ -168,11 +168,11 @@ const priceAction: Action = {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "PLS price" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll fetch the current PLS price for you.",
                     action: "GET_PRICE"
@@ -181,11 +181,11 @@ const priceAction: Action = {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "How much is PLSX worth?" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Let me get the latest PLSX market price.",
                     action: "GET_PRICE"

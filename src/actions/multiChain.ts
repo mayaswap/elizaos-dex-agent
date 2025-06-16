@@ -81,8 +81,8 @@ const multiChainAction: Action = {
 
             // Check for balance inquiry across chains
             if (text.includes('balance') && !targetChain) {
-                const platformUser = createPlatformUser(runtime, message);
-                const walletService = new WalletService(runtime);
+                const platformUser = createPlatformUser(runtime as any, message);
+                const walletService = new WalletService(runtime as any);
                 const userWallets = await walletService.getUserWallets(platformUser);
                 const walletCount = userWallets.length;
 
@@ -245,11 +245,11 @@ Currently supported: PulseChain, Base, and Sonic networks.`
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Switch to Base network" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {   
                     text: "I'll switch you to the Base network and show you the available features and DEXs.",
                     action: "MULTI_CHAIN_SUPPORT"
@@ -258,11 +258,11 @@ Currently supported: PulseChain, Base, and Sonic networks.`
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Show my Sonic balance" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Let me check your token balances on the Sonic network.",
                     action: "MULTI_CHAIN_SUPPORT"
@@ -271,11 +271,11 @@ Currently supported: PulseChain, Base, and Sonic networks.`
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "What chains are supported?" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll show you all supported networks with their features and how to switch between them.",
                     action: "MULTI_CHAIN_SUPPORT"

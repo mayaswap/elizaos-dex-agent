@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  elizaos-dex-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DEPLOYMENT_MODE=all
+      - DEBUG_MODE=true
+      - LOG_LEVEL=debug
+    command: ["npm", "run", "dev"]
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Node.js debugging port 

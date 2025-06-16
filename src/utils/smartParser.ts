@@ -22,9 +22,21 @@ export class SmartParser {
     }
 
     /**
+     * Simple cache to prevent multiple API calls for the same input
+     */
+    private static parseCache = new Map<string, { result: ParsedCommand; timestamp: number }>();
+    private static CACHE_DURATION = 10000; // 10 seconds
+
+    /**
      * Parse command using AI-first approach with regex fallback
      */
     public async parseCommand(input: string): Promise<ParsedCommand> {
+        // Check cache first to avoid redundant API calls
+        const cached = SmartParser.parseCache.get(input);
+        if (cached && Date.now() - cached.timestamp < SmartParser.CACHE_DURATION) {
+            console.log(`📋 Using cached result for "${input}"`);
+            return cached.result;
+        }
         // Try AI parsing first if available
         if (this.aiParser.isAvailable()) {
             try {
@@ -33,10 +45,20 @@ export class SmartParser {
                 // If AI is confident, use its result
                 if (aiResult.confidence >= 0.7) {
                     console.log(`🤖 Using AI parsing: "${input}" → ${aiResult.intent} (${(aiResult.confidence * 100).toFixed(0)}%)`);
+                    
+                    // Cache the AI result
+                    SmartParser.parseCache.set(input, { result: aiResult, timestamp: Date.now() });
+                    
                     return aiResult;
                 }
                 
-                // If AI is less confident, try regex fallback
+                // If AI confidence is very low (0.05), it's likely general conversation - skip retries
+                if (aiResult.confidence <= 0.1) {
+                    console.log(`🤖 AI detected general conversation - skipping retries`);
+                    return aiResult;
+                }
+                
+                // If AI is moderately uncertain, try regex fallback
                 console.log(`🤖 AI uncertain (${(aiResult.confidence * 100).toFixed(0)}%), trying regex fallback...`);
                 
             } catch (error) {
@@ -47,6 +69,15 @@ export class SmartParser {
         // Fallback to regex parsing
         const regexResult = await parseWithRegex(input);
         console.log(`📝 Using regex parsing: "${input}" → ${regexResult.intent} (${(regexResult.confidence * 100).toFixed(0)}%)`);
+        
+        // Cache the result
+        SmartParser.parseCache.set(input, { result: regexResult, timestamp: Date.now() });
+        
+        // Keep cache size manageable
+        if (SmartParser.parseCache.size > 50) {
+            const oldestKey = SmartParser.parseCache.keys().next().value;
+            SmartParser.parseCache.delete(oldestKey);
+        }
         
         return regexResult;
     }

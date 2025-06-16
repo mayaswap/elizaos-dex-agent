@@ -287,7 +287,7 @@ export class NineMmPoolDiscoveryService {
     
     // Show recent volume (24h) if available, otherwise show total with warning
     let volumeDisplay: string;
-    if (pool.poolDayData && pool.poolDayData.length > 0) {
+    if (pool.poolDayData && pool.poolDayData.length > 0 && pool.poolDayData[0]) {
       const recentVolume = pool.poolDayData[0].volumeUSD; // Most recent day
       volumeDisplay = `${this.formatUSD(recentVolume)} (24h)`;
     } else {

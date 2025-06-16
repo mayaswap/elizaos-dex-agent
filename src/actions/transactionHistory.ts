@@ -39,8 +39,8 @@ const transactionHistoryAction: Action = {
     ): Promise<boolean> => {
         try {
             const text = message.content?.text?.toLowerCase() || '';
-            const platformUser = createPlatformUser(runtime, message);
-            const walletService = new WalletService(runtime);
+            const platformUser = createPlatformUser(runtime as any, message);
+            const walletService = new WalletService(runtime as any);
             const userWallets = await walletService.getUserWallets(platformUser);
             const walletCount = userWallets.length;
 
@@ -84,7 +84,7 @@ To view your transaction history, you need to connect a wallet first.
             else if (text.includes('failed') || text.includes('error')) transactionType = 'failed';
 
             // Fetch real transaction history from database
-            const dbService = new DatabaseService(runtime);
+            const dbService = new DatabaseService(runtime as any);
             await dbService.initializeDatabase();
             
             const userId = `${platformUser.platform}:${platformUser.platformUserId}`;
@@ -110,8 +110,10 @@ To view your transaction history, you need to connect a wallet first.
                 gasCost: trade.gasCost || "N/A",
                 status: trade.success ? "confirmed" : "failed",
                 slippage: trade.slippageUsed ? `${trade.slippageUsed}%` : "N/A",
-                route: trade.dexUsed || "9mm DEX",
-                usdValue: 0 // Would need price data to calculate
+                route: "Direct", // Default route
+                usdValue: 0, // Default USD value  
+                pool: "N/A", // Default pool
+                positionId: "N/A" // Default position ID
             }));
 
             // Filter transactions based on criteria
@@ -217,11 +219,11 @@ ${filteredTransactions.slice(0, 5).map((tx, i) => {
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Show my recent trades" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {   
                     text: "I'll show you your recent trading activity with performance metrics and transaction details.",
                     action: "TRANSACTION_HISTORY"
@@ -230,11 +232,11 @@ ${filteredTransactions.slice(0, 5).map((tx, i) => {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Transaction history this week" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Let me pull up your transaction history for the past week with volume and gas cost analysis.",
                     action: "TRANSACTION_HISTORY"
@@ -243,11 +245,11 @@ ${filteredTransactions.slice(0, 5).map((tx, i) => {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Show my swap history" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll filter your transaction history to show only swap transactions with performance data.",
                     action: "TRANSACTION_HISTORY"

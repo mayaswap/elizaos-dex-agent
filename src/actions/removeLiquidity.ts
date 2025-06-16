@@ -169,11 +169,11 @@ If you have positions that are out of range and not earning fees, you might want
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Remove liquidity from position #12345" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {   
                     text: "I'll help you remove liquidity from position #12345. Let me fetch the position details and show you the expected returns.",
                     action: "REMOVE_LIQUIDITY"
@@ -182,11 +182,11 @@ If you have positions that are out of range and not earning fees, you might want
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "I want to close my PLS/USDC position" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll help you close your PLS/USDC position. First, let me identify your positions in that pool.",
                     action: "REMOVE_LIQUIDITY"
@@ -195,11 +195,11 @@ If you have positions that are out of range and not earning fees, you might want
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Withdraw 50% of my liquidity from position 789" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll prepare a 50% withdrawal from position #789, showing you the expected tokens and fees you'll receive.",
                     action: "REMOVE_LIQUIDITY"

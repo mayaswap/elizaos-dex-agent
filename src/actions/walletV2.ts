@@ -9,6 +9,7 @@ import type {
 } from '@elizaos/core';
 import { parseCommand } from '../utils/smartParser.js';
 import { WalletService, createPlatformUser, PlatformUser } from '../services/walletService.js';
+import { sessionService } from '../services/sessionService.js';
 
 const walletV2Action: Action = {
     name: "WALLET_V2",
@@ -20,12 +21,32 @@ const walletV2Action: Action = {
         "WALLET_INFO",
         "MY_WALLET",
         "WALLET_LIST",
-        "SWITCH_WALLET"
+        "SWITCH_WALLET",
+        "LIST_WALLETS",
+        "SHOW_WALLET",
+        "WALLET_DASHBOARD",
+        "WALLET_SETTINGS"
     ],
     validate: async (runtime: IAgentRuntime, message: Memory) => {
         try {
             if (!message.content?.text) return false;
             
+            const text = message.content.text.toLowerCase();
+            
+            // Check for wallet-related keywords
+            const walletKeywords = [
+                'wallet', 'create', 'generate', 'new wallet', 'import wallet',
+                'list wallet', 'show wallet', 'my wallet', 'wallet info',
+                'wallet settings', 'switch to', 'wallet dashboard'
+            ];
+            
+            const hasWalletKeyword = walletKeywords.some(keyword => text.includes(keyword));
+            
+            if (hasWalletKeyword) {
+                return true;
+            }
+            
+            // Fallback to AI parsing
             const parsed = await parseCommand(message.content.text);
             return parsed.intent === 'wallet';
         } catch (error) {
@@ -45,12 +66,20 @@ const walletV2Action: Action = {
             const userMessage = message.content?.text || "";
             const lowerText = userMessage.toLowerCase();
             
-            // Initialize wallet service
-            const walletService = new WalletService(runtime);
-            await walletService.initializeDatabase();
+            // Get the shared wallet service from runtime
+            let walletService: WalletService;
+            if ((runtime as any).customServices?.wallet) {
+                walletService = (runtime as any).customServices.wallet;
+                console.log('✅ Using shared WalletService from runtime');
+            } else {
+                // Fallback: create new instance if not available
+                console.warn("⚠️ Shared wallet service not available, creating new WalletService instance");
+                walletService = new WalletService(runtime as any);
+                await walletService.initializeDatabase();
+            }
             
             // Create platform user from message
-            const platformUser = createPlatformUser(runtime, message);
+            const platformUser = createPlatformUser(runtime as any, message);
             
             let responseText = "";
 
@@ -63,13 +92,16 @@ const walletV2Action: Action = {
                 try {
                     const newWallet = await walletService.createWallet(platformUser, walletName);
                     
+                    // ✅ UPDATE SESSION SERVICE
+                    sessionService.updateWalletStatus(platformUser, true, newWallet.id);
+                    
                     responseText = `🎉 **New Wallet Created Successfully!**
 
 **Platform:** ${platformUser.platform.toUpperCase()}
 **Wallet Name:** ${newWallet.name}
 
 📋 **Full Address (Tap to Copy):**
-${newWallet.address}
+\`${newWallet.address}\`
 
 ⚠️ **IMPORTANT SECURITY NOTES:**
 • Your wallet is securely encrypted and stored in the database
@@ -83,10 +115,9 @@ ${newWallet.address}
 3. Check your balance with "show my balance"
 
 **📱 Platform Benefits:**
-• **Telegram**: Use wallet commands directly in chat
-• **Discord**: Trade within your Discord server
-• **Web**: Access through the web interface
-• **Cross-Platform**: Your wallet works across all platforms
+• **Terminal**: Direct command-line access
+• **Database**: Persistent storage with encryption
+• **Multi-Platform**: Ready for Telegram, Discord, Web
 
 **🔒 Security Features:**
 • AES-256 encryption for private keys
@@ -134,13 +165,14 @@ Send: "import wallet with mnemonic: YOUR_SEED_PHRASE"
 
 **Ready to import?** Send your private key or mnemonic phrase.`;
                 
-            } else if (lowerText.includes('list') || lowerText.includes('show')) {
+            } else if (lowerText.includes('list') || lowerText.includes('show') || lowerText.includes('my wallet') || lowerText.includes('what is my wallet')) {
                 // Show wallet list
-                const wallets = await walletService.getUserWallets(platformUser);
-                const summary = await walletService.getUserSummary(platformUser);
-                
-                if (wallets.length === 0) {
-                    responseText = `👛 **No Wallets Found**
+                try {
+                    const wallets = await walletService.getUserWallets(platformUser);
+                    const summary = await walletService.getUserSummary(platformUser);
+                    
+                    if (wallets.length === 0) {
+                        responseText = `👛 **No Wallets Found**
 
 You don't have any wallets yet on ${platformUser.platform.toUpperCase()}.
 
@@ -150,21 +182,21 @@ You don't have any wallets yet on ${platformUser.platform.toUpperCase()}.
 
 **Platform:** ${platformUser.platform.toUpperCase()}
 **User ID:** ${platformUser.platformUserId}`;
-                } else {
-                    responseText = `👛 **Your Wallet Dashboard**
+                    } else {
+                        responseText = `👛 **Your Wallet Dashboard**
 
 **Platform:** ${platformUser.platform.toUpperCase()} (@${platformUser.platformUsername || platformUser.platformUserId})
 **Total Wallets:** ${summary.totalWallets}/5
 **Member Since:** ${summary.createdAt.toLocaleDateString()}
 
 **🟢 Active Wallet:** ${summary.activeWallet?.name || 'None'}
-${summary.activeWallet ? `• Address: ${summary.activeWallet.address}\n• Created: ${summary.activeWallet.createdAt.toLocaleDateString()}\n• Last Used: ${summary.activeWallet.lastUsed.toLocaleString()}` : ''}
+${summary.activeWallet ? `• Address: \`${summary.activeWallet.address}\`\n• Created: ${summary.activeWallet.createdAt.toLocaleDateString()}\n• Last Used: ${summary.activeWallet.lastUsed.toLocaleString()}` : ''}
 
 **📋 All Wallets:**
 ${wallets.map((wallet, i) => {
     const indicator = wallet.isActive ? '🟢 Active' : '⚫ Inactive';
     return `${i + 1}. **${wallet.name}** ${indicator}
-   📍 ${wallet.address}
+   📍 \`${wallet.address}\`
    📅 Created: ${wallet.createdAt.toLocaleDateString()}
    ⚙️ Slippage: ${wallet.settings.slippagePercentage}%
    🛡️ MEV Protection: ${wallet.settings.mevProtection ? 'ON' : 'OFF'}`;
@@ -180,6 +212,13 @@ ${wallets.map((wallet, i) => {
 ✅ Private keys encrypted with AES-256
 ✅ Platform-isolated storage
 ✅ Database backup & recovery`;
+                    }
+                } catch (error) {
+                    responseText = `❌ **Error retrieving wallets**
+
+${error instanceof Error ? error.message : 'Unknown error occurred'}
+
+**Try:** "create new wallet" to get started.`;
                 }
                 
             } else if (lowerText.includes('switch')) {
@@ -216,10 +255,12 @@ ${wallets.map((w, i) => `${i + 1}. ${w.name}`).join('\n')}
                         const success = await walletService.switchWallet(platformUser, targetWallet.id);
                         
                         if (success) {
+                            // ✅ UPDATE SESSION SERVICE
+                            sessionService.updateWalletStatus(platformUser, true, targetWallet.id);
                             responseText = `✅ **Wallet Switched Successfully**
 
 **New Active Wallet:** ${targetWallet.name}
-**Address:** ${targetWallet.address}
+**Address:** \`${targetWallet.address}\`
 **Settings:**
 • Slippage: ${targetWallet.settings.slippagePercentage}%
 • MEV Protection: ${targetWallet.settings.mevProtection ? 'ON' : 'OFF'}
@@ -243,7 +284,7 @@ Could not switch to "${targetWallet.name}". This might be due to:
                     }
                 }
                 
-            } else if (lowerText.includes('settings') || lowerText.includes('config')) {
+            } else if (lowerText.includes('settings')) {
                 // Show current wallet settings
                 const activeWallet = await walletService.getActiveWallet(platformUser);
                 
@@ -271,7 +312,7 @@ You need to have an active wallet to view settings.
 • **Portfolio Changes:** ${activeWallet.settings.notifications.portfolioChanges ? '✅ ON' : '❌ OFF'}
 
 **📊 Wallet Info:**
-• **Address:** ${activeWallet.address}
+• **Address:** \`${activeWallet.address}\`
 • **Created:** ${activeWallet.createdAt.toLocaleDateString()}
 • **Last Used:** ${activeWallet.lastUsed.toLocaleString()}
 
@@ -308,11 +349,11 @@ You need to have an active wallet to view settings.
 • "wallet settings" - View current configuration
 
 **🎯 Features:**
-✅ **Multi-Platform:** Works on Telegram, Discord, Web
+✅ **Terminal Access:** Direct command-line interface
 ✅ **Secure Storage:** AES-256 encrypted private keys
 ✅ **Multiple Wallets:** Up to 5 wallets per platform
 ✅ **Independent Settings:** Each wallet has its own preferences
-✅ **Cross-Platform Sync:** Access from any supported platform
+✅ **Database Persistence:** All data stored securely
 
 **📱 Current Status:**
 • Platform: ${platformUser.platform.toUpperCase()}
@@ -351,31 +392,41 @@ An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknow
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "create new wallet" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "I'll create a new wallet for you with secure encryption and database storage." }
             }
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "list my wallets" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "Here are all your wallets with their current settings and activity status." }
             }
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
+                content: { text: "what is my wallet" }
+            },
+            {
+                name: "{{user2}}",
+                content: { text: "Here's your current wallet information and dashboard." }
+            }
+        ],
+        [
+            {
+                name: "{{user1}}",
                 content: { text: "switch to MyTradingWallet" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "Successfully switched to MyTradingWallet. All trading commands will now use this wallet." }
             }
         ]

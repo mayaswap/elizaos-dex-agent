@@ -39,8 +39,8 @@ const priceAlertsAction: Action = {
     ) => {
         try {
             const text = message.content.text.toLowerCase();
-            const platformUser = createPlatformUser(runtime, message);
-            const dbService = new DatabaseService(runtime);
+            const platformUser = createPlatformUser(runtime as any, message);
+            const dbService = new DatabaseService(runtime as any);
             await dbService.initializeDatabase();
             
             const userPlatformId = `${platformUser.platform}:${platformUser.platformUserId}`;
@@ -324,31 +324,31 @@ If the problem persists, please check your database connection.`
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "alert me when HEX hits $0.001" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "Price alert created! I'll notify you when HEX reaches $0.001." }
             }
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "show my alerts" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "Here are all your active price alerts with their current status." }
             }
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "notify when WPLS goes above $0.0003" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "Alert set! You'll be notified when WPLS price rises above $0.0003." }
             }
         ]

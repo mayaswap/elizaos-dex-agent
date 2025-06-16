@@ -10,6 +10,9 @@ import {
 import { parseCommand } from "../utils/smartParser.js";
 import { NineMMAggregator } from "../utils/aggregator.js";
 import { POPULAR_TOKENS } from "../config/chains.js";
+import { WalletGuard } from "../utils/walletGuard.js";
+import { sessionService } from "../services/sessionService.js";
+import { metricsCollector } from "../services/metricsCollector.js";
 
 // Token metadata for proper decimal handling
 const TOKEN_METADATA: Record<string, { decimals: number; symbol: string }> = {
@@ -38,8 +41,29 @@ const swapAction: Action = {
         const text = message.content.text;
         const parsed = await parseCommand(text);
         
-        // Valid if it's a swap command with sufficient confidence
-        return parsed.intent === 'swap' && parsed.confidence > 0.6;
+        const isValid = parsed.intent === 'swap' && parsed.confidence > 0.6;
+        
+        // 📊 METRICS: Track validation events
+        const userForMetrics = {
+            id: runtime.agentId,
+            platform: 'telegram' as const,
+            userId: (message.content as any)?.source || 'anonymous'
+        };
+        
+        metricsCollector.track({
+            type: 'user_action',
+            category: 'validation',
+            action: isValid ? 'swap_validated' : 'swap_rejected',
+            user: userForMetrics,
+            data: {
+                intent: parsed.intent,
+                confidence: parsed.confidence,
+                text: text.substring(0, 100) // First 100 chars for context
+            },
+            timestamp: Date.now()
+        });
+        
+        return isValid;
     },
     description: "Execute token swaps using natural language commands via 9mm DEX aggregator",
     handler: async (
@@ -49,8 +73,30 @@ const swapAction: Action = {
         _options?: { [key: string]: unknown },
         callback?: HandlerCallback
     ): Promise<boolean> => {
+        const startTime = Date.now();
         const text = message.content.text;
         const parsed = await parseCommand(text);
+
+        // 📊 METRICS: Track swap action start  
+        const userForMetrics = {
+            id: runtime.agentId,
+            platform: 'telegram' as const, // Detect actual platform from message/runtime
+            userId: (message.content as any)?.source || 'anonymous'
+        };
+
+        metricsCollector.track({
+            type: 'user_action',
+            category: 'trading',
+            action: 'swap_initiated',
+            user: userForMetrics,
+            data: {
+                fromToken: parsed.fromToken,
+                toToken: parsed.toToken,
+                amount: parsed.amount,
+                confidence: parsed.confidence
+            },
+            timestamp: startTime
+        });
         
         if (!parsed.fromToken || !parsed.toToken || !parsed.amount) {
             if (callback) {
@@ -60,6 +106,14 @@ const swapAction: Action = {
             }
             return false;
         }
+
+        // ✅ WALLET REQUIREMENT CHECK
+        const walletCheck = await WalletGuard.enforceWalletRequired(runtime, message, callback);
+        if (!walletCheck) {
+            return false; // WalletGuard already sent appropriate message
+        }
+
+        const { platformUser } = walletCheck;
 
         try {
             const aggregator = new NineMMAggregator(369); // Pulsechain
@@ -81,13 +135,16 @@ const swapAction: Action = {
             // Convert amount to wei based on token decimals
             const amountInWei = NineMMAggregator.formatAmount(parsed.amount.toString(), fromTokenMeta.decimals);
 
-            // Get swap quote
+            // Get user's settings for slippage
+            const userSettings = sessionService.getSettings(platformUser);
+
+            // Get swap quote with user's preferred slippage
             const quote = await aggregator.getSwapQuote({
                 fromToken: fromTokenAddress,
                 toToken: toTokenAddress,
                 amount: amountInWei,
-                slippagePercentage: 0.5, // 0.5% default slippage
-                userAddress: "0x0000000000000000000000000000000000000000", // Placeholder
+                slippagePercentage: userSettings.slippagePercentage,
+                userAddress: "0x0000000000000000000000000000000000000000", // Will be replaced with actual wallet address
                 chainId: 369
             });
 
@@ -115,17 +172,42 @@ const swapAction: Action = {
             const routeDisplay = quote.sources && quote.sources.length > 0
                 ? quote.sources.map(s => typeof s === 'string' ? s : s.name).join(' + ')
                 : 'Best Available Route';
-            
-            const responseText = `🔄 **Swap Quote Ready**
-            
-**Trade:** ${parsed.amount} ${parsed.fromToken} → ${parsed.toToken}
-**You'll receive:** ~${buyAmountFormatted} ${parsed.toToken}
-**Price Impact:** ${priceImpact}
-**Gas Estimate:** ${gasEstimate} gas units
-**Price:** ${price.toFixed(8)} ${parsed.toToken} per ${parsed.fromToken}
 
-*Route: ${routeDisplay}*
-*Note: This is a quote only. To execute the swap, you would need to connect a wallet and approve the transaction.*`;
+            // 🎯 CREATE PENDING TRANSACTION FOR CONFIRMATION
+            const transactionId = sessionService.createPendingTransaction(
+                platformUser,
+                'swap',
+                {
+                    type: 'swap',
+                    fromToken: parsed.fromToken,
+                    toToken: parsed.toToken,
+                    amount: parsed.amount,
+                    quote: quote,
+                    chatId: (message.content as any)?.chatId || 0
+                }
+            );
+            
+            const responseText = `🔄 **Swap Confirmation Required**
+            
+**Trade Details:**
+• **Amount:** ${parsed.amount} ${parsed.fromToken} → ${parsed.toToken}
+• **You'll receive:** ~${buyAmountFormatted} ${parsed.toToken}
+• **Price Impact:** ${priceImpact}
+• **Slippage:** ${userSettings.slippagePercentage}%
+• **Gas Estimate:** ${gasEstimate} gas units
+• **Price:** ${price.toFixed(8)} ${parsed.toToken} per ${parsed.fromToken}
+
+**Route:** ${routeDisplay}
+**MEV Protection:** ${userSettings.mevProtection ? '✅ Enabled' : '❌ Disabled'}
+
+⚠️ **This is a REAL transaction that will use your funds!**
+
+**Confirm this trade?**
+• Reply "yes" or "confirm" to execute
+• Reply "no" or "cancel" to cancel
+• Quote expires in 5 minutes
+
+**Transaction ID:** \`${transactionId}\``;
 
             if (callback) {
                 callback({
@@ -133,10 +215,63 @@ const swapAction: Action = {
                 });
             }
 
+            // 📊 METRICS: Track successful swap quote generation
+            metricsCollector.track({
+                type: 'user_action',
+                category: 'trading',
+                action: 'swap_quote_success',
+                user: userForMetrics,
+                data: {
+                    fromToken: parsed.fromToken,
+                    toToken: parsed.toToken,
+                    amount: parsed.amount,
+                    quote: {
+                        buyAmount: quote.buyAmount,
+                        price: quote.price,
+                        gas: quote.gas,
+                        priceImpact: quote.estimatedPriceImpact
+                    },
+                    transactionId,
+                    duration: Date.now() - startTime
+                },
+                timestamp: Date.now()
+            });
+
+            metricsCollector.trackTiming('swap_quote_generation', Date.now() - startTime, userForMetrics);
+
             return true;
 
         } catch (error) {
             console.error('Swap action error:', error);
+            
+            // 📊 METRICS: Track swap action error
+            metricsCollector.trackError(
+                error instanceof Error ? error : new Error('Unknown swap error'),
+                {
+                    action: 'swap',
+                    fromToken: parsed.fromToken,
+                    toToken: parsed.toToken,
+                    amount: parsed.amount,
+                    duration: Date.now() - startTime
+                },
+                userForMetrics
+            );
+
+            metricsCollector.track({
+                type: 'user_action', 
+                category: 'trading',
+                action: 'swap_quote_failed',
+                user: userForMetrics,
+                data: {
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                    fromToken: parsed.fromToken,
+                    toToken: parsed.toToken,
+                    amount: parsed.amount,
+                    duration: Date.now() - startTime
+                },
+                timestamp: Date.now()
+            });
+
             if (callback) {
                 callback({
                     text: `❌ Failed to get swap quote: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -148,11 +283,11 @@ const swapAction: Action = {
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Swap 100 USDC for WPLS" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {   
                     text: "I'll get you a quote for swapping 100 USDC to WPLS using the best available routes.",
                     action: "EXECUTE_SWAP"
@@ -161,11 +296,11 @@ const swapAction: Action = {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Trade 50 PLS for HEX" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Let me find the best price for trading 50 PLS to HEX across all DEX pools.",
                     action: "EXECUTE_SWAP"
@@ -174,11 +309,11 @@ const swapAction: Action = {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Convert 0.5 WETH to USDT" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll check the conversion rate for 0.5 WETH to USDT and find the optimal route.",
                     action: "EXECUTE_SWAP"

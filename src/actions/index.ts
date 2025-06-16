@@ -18,6 +18,8 @@ export { default as advancedOrdersAction } from './advancedOrders.js';
 export { default as startMonitoringAction } from './startMonitoring.js';
 export { default as walletManagementAction } from './walletManagement.js';
 export { default as walletAddressAction } from './walletAddress.js';
+export { default as transactionConfirmationAction } from './transactionConfirmation.js';
+export { default as contextualResponseAction } from './contextualResponse.js';
 
 // Export all actions as an array for easy registration with ElizaOS runtime
 export const allActions = async () => {
@@ -25,7 +27,7 @@ export const allActions = async () => {
     const { default: priceAction } = await import('./price.js');
     const { default: balanceAction } = await import('./balance.js');
     const { default: portfolioAction } = await import('./portfolio.js');
-    const { default: walletAction } = await import('./wallet.js');
+    // const { default: walletAction } = await import('./wallet.js'); // REMOVED: Legacy wallet action
     const { default: walletV2Action } = await import('./walletV2.js');
     const { default: addLiquidityAction } = await import('./addLiquidity.js');
     const { default: removeLiquidityAction } = await import('./removeLiquidity.js');
@@ -39,21 +41,27 @@ export const allActions = async () => {
     const { default: positionTrackingAction } = await import('./positionTracking.js');
     const { default: advancedOrdersAction } = await import('./advancedOrders.js');
     const { default: startMonitoringAction } = await import('./startMonitoring.js');
-    const { default: walletManagementAction } = await import('./walletManagement.js');
+    // const { default: walletManagementAction } = await import('./walletManagement.js'); // REMOVED: Conflicts with WALLET_V2
     
     // New database-powered actions
     const { default: tradingAnalyticsAction } = await import('./tradingAnalytics.js');
     const { default: priceAlertsAction } = await import('./priceAlerts.js');
     const { default: watchlistsAction } = await import('./watchlists.js');
     const { default: walletAddressAction } = await import('./walletAddress.js');
+    const { default: transactionConfirmationAction } = await import('./transactionConfirmation.js');
+    const { default: contextualResponseAction } = await import('./contextualResponse.js');
     
     return [
+        // Wallet system - PRIORITIZED FIRST
+        walletV2Action, // Primary database-backed wallet system
+        
+        // Trading actions
         swapAction,
+        transactionConfirmationAction, // Handle transaction confirmations
+        contextualResponseAction, // Handle context switching with pending transactions
         priceAction,
         balanceAction,
         portfolioAction,
-        // walletAction, // REMOVED: Legacy wallet action to prevent conflicts
-        walletV2Action, // Primary wallet system
         addLiquidityAction,
         removeLiquidityAction,
         queryPoolsAction,
@@ -66,8 +74,11 @@ export const allActions = async () => {
         positionTrackingAction,
         advancedOrdersAction,
         startMonitoringAction,
-        walletManagementAction, // Advanced wallet management 
+        
+        // Display actions
         walletAddressAction, // Wallet address display
+        
+        // Analytics actions
         tradingAnalyticsAction,
         priceAlertsAction,
         watchlistsAction

@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # ElizaOS DEX Agent
+  elizaos-dex-agent:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DEPLOYMENT_MODE=all
+      - PORT=3000
+      - POSTGRES_URL=postgresql://postgres:password@postgres:5432/elizaos_dex
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - WALLET_ENCRYPTION_KEY=${WALLET_ENCRYPTION_KEY:-defaultkey1234567890123456789012}
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    networks:
+      - elizaos-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=elizaos_dex
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - elizaos-network
+
+  # Redis (for caching and rate limiting)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - elizaos-network
+
+  # Monitoring Dashboard (optional)
+  monitoring:
+    build: .
+    command: ["node", "dist/services/monitoringDashboard.js"]
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_URL=postgresql://postgres:password@postgres:5432/elizaos_dex
+    depends_on:
+      - postgres
+      - elizaos-dex-agent
+    restart: unless-stopped
+    networks:
+      - elizaos-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  elizaos-network:
+    driver: bridge
+
+# Development override available in docker-compose.dev.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up 

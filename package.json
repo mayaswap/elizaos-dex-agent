@@ -9,46 +9,73 @@
     "npm": ">=8.0.0"
   },
   "scripts": {
-    "dev": "tsx src/index.ts",
-    "build": "echo 'Build successful'",
-    "start": "tsx src/telegram-bot.ts",
-    "agent": "tsx src/agent.ts",
-    "runtime": "tsx src/agent-runtime.ts",
-    "telegram": "tsx src/telegram-bot.ts",
-    "import-tokens": "tsx src/utils/import-tokens.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx server.js",
+    "build": "tsc --build && cp -r characters dist/ && cp -r knowledge dist/",
+    "start": "node server.js",
+    "server": "tsx server.js",
+    "web": "DEPLOYMENT_MODE=web tsx server.js",
+    "telegram": "DEPLOYMENT_MODE=telegram tsx server.js",
+    "all": "DEPLOYMENT_MODE=all tsx server.js",
+    "deploy": "npm run build && npm start",
+    "railway": "DEPLOYMENT_MODE=web npm start",
+    "heroku": "DEPLOYMENT_MODE=web npm start",
+    "vercel": "DEPLOYMENT_MODE=web npm start",
+    "local": "DEPLOYMENT_MODE=all tsx server.js",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "format": "biome format --write src",
+    "check": "biome check --write src",
+    "type-check": "tsc --noEmit",
+    "postinstall": "npm run build"
   },
   "keywords": [
     "elizaos",
     "dex",
     "trading",
+    "9mm",
     "pulsechain",
     "defi",
     "telegram",
     "discord",
-    "ai-agent"
+    "ai-agent",
+    "multi-platform"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "ElizaOS DEX Agent Team",
+  "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.53.0",
+    "@elizaos/adapter-postgres": "^0.25.6-alpha.1",
+    "@elizaos/adapter-sqlite": "^0.25.6-alpha.1",
+    "@elizaos/client-telegram": "^0.25.6-alpha.1",
+    "@elizaos/core": "^1.0.9",
+    "@elizaos/plugin-bootstrap": "^1.0.9",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.0",
+    "better-sqlite3": "^11.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "ethers": "^6.14.3",
     "express": "^5.1.0",
+    "graphql-request": "^6.1.0",
     "node-telegram-bot-api": "^0.66.0",
-    "better-sqlite3": "^8.7.0",
+    "sharp": "^0.34.2",
+    "sqlite3": "^5.1.7",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node-telegram-bot-api": "^0.64.9",
     "@types/pg": "^8.11.0",
     "@types/uuid": "^10.0.0",
-    "@types/node-telegram-bot-api": "^0.64.9",
-    "@types/better-sqlite3": "^7.6.3"
+    "vitest": "^1.6.0"
+  },
+  "peerDependencies": {
+    "node": ">=18.0.0"
   }
 }

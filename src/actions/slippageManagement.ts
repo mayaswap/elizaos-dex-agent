@@ -44,8 +44,8 @@ const slippageManagementAction: Action = {
             const requestedSlippage = percentageMatch?.[1] ? parseFloat(percentageMatch[1]) : null;
             
             // Get platform user and wallet settings
-            const platformUser = createPlatformUser(runtime, message);
-            const walletService = new WalletService(runtime);
+            const platformUser = createPlatformUser(runtime as any, message);
+            const walletService = new WalletService(runtime as any);
             
             const activeWallet = await walletService.getActiveWallet(platformUser);
             
@@ -322,11 +322,11 @@ Current slippage: ${currentSettings.slippage}% | MEV Protection: ${currentSettin
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Set slippage to 0.5%" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {   
                     text: "I'll set your slippage tolerance to 0.5% and show you the risk assessment for this setting.",
                     action: "SLIPPAGE_MANAGEMENT"
@@ -335,11 +335,11 @@ Current slippage: ${currentSettings.slippage}% | MEV Protection: ${currentSettin
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Enable MEV protection" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll enable MEV protection to safeguard your trades against front-running and sandwich attacks.",
                     action: "SLIPPAGE_MANAGEMENT"
@@ -348,11 +348,11 @@ Current slippage: ${currentSettings.slippage}% | MEV Protection: ${currentSettin
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Show my trading settings" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll display your current slippage tolerance, MEV protection status, and other trading configurations.",
                     action: "SLIPPAGE_MANAGEMENT"

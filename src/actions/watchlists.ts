@@ -39,8 +39,8 @@ const watchlistsAction: Action = {
     ) => {
         try {
             const text = message.content.text.toLowerCase();
-            const platformUser = createPlatformUser(runtime, message);
-            const dbService = new DatabaseService(runtime);
+            const platformUser = createPlatformUser(runtime as any, message);
+            const dbService = new DatabaseService(runtime as any);
             await dbService.initializeDatabase();
             
             const userPlatformId = `${platformUser.platform}:${platformUser.platformUserId}`;
@@ -74,7 +74,7 @@ Ready to create your watchlist!`;
                 } else {
                     const watchlistName = nameMatch[1]?.trim() || '';
                     const tokensString = tokensMatch?.[1]?.trim() || '';
-                    const tokens = tokensString ? tokensString.split(/[\s,]+/).map(t => t.toUpperCase()).filter(t => t.length > 0) : [];
+                    const tokens = tokensString ? tokensString.split(/[\s,]+/).map((t: string) => t.toUpperCase()).filter((t: string) => t.length > 0) : [];
                     
                     if (!watchlistName) {
                         responseText = `❌ **Missing Watchlist Name**
@@ -387,31 +387,31 @@ If the problem persists, please check your database connection.`
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "create watchlist named DeFi Favorites with HEX WPLS USDC" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "Watchlist 'DeFi Favorites' created with HEX, WPLS, and USDC for easy monitoring!" }
             }
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "show my watchlists" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "Here are all your token watchlists with their contents and management options." }
             }
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "check prices for DeFi Favorites" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "Current prices for all tokens in your DeFi Favorites watchlist." }
             }
         ]

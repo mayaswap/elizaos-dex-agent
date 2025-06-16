@@ -5,8 +5,24 @@
     "buildCommand": "npm install --legacy-peer-deps && npm run build"
   },
   "deploy": {
-    "startCommand": "npm start",
+    "startCommand": "npm run railway",
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3
+    "restartPolicyMaxRetries": 5,
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30
+  },
+  "environments": {
+    "production": {
+      "DEPLOYMENT_MODE": "web",
+      "NODE_ENV": "production"
+    },
+    "telegram": {
+      "DEPLOYMENT_MODE": "telegram",
+      "NODE_ENV": "production"
+    },
+    "multi": {
+      "DEPLOYMENT_MODE": "all",
+      "NODE_ENV": "production"
+    }
   }
 } 

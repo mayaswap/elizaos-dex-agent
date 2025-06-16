@@ -251,11 +251,11 @@ ${topPoolsInfo}
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Show me the best liquidity pools" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {   
                     text: "I'll find the top liquidity pools on 9mm V3 sorted by TVL and APY for you.",
                     action: "QUERY_POOLS"
@@ -264,11 +264,11 @@ ${topPoolsInfo}
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "What pools are available for WPLS and USDC?" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Let me search for all WPLS/USDC liquidity pools and show you their current stats and yields.",
                     action: "QUERY_POOLS"
@@ -277,11 +277,11 @@ ${topPoolsInfo}
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Show my liquidity positions" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll retrieve all your active liquidity positions with their current performance metrics.",
                     action: "QUERY_POOLS"

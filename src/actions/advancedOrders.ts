@@ -404,11 +404,11 @@ ${activeAlerts.length > 0 ? activeAlerts.map((alert, i) => {
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Set limit order: buy HEX at $0.005" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll set up price monitoring for HEX at $0.005 and alert you when it's time to execute the buy order.",
                     action: "ADVANCED_ORDERS"
@@ -417,11 +417,11 @@ ${activeAlerts.length > 0 ? activeAlerts.map((alert, i) => {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Stop loss for PLS below $0.00008" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll monitor PLS price and alert you immediately if it drops below $0.00008 so you can execute a protective sell.",
                     action: "ADVANCED_ORDERS"
@@ -430,11 +430,11 @@ ${activeAlerts.length > 0 ? activeAlerts.map((alert, i) => {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "How do limit orders work on DEXes?" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Let me explain how advanced order types work on decentralized exchanges and what solutions are available.",
                     action: "ADVANCED_ORDERS"

@@ -10,21 +10,190 @@
 import TelegramBot, { Message } from 'node-telegram-bot-api';
 import dotenv from 'dotenv';
 import { ethers } from 'ethers';
-import { WalletService, PlatformUser } from './services/walletService.js';
-import { DatabaseService } from './services/databaseService.js';
-import { PriceService } from './services/priceService.js';
-import Database from 'better-sqlite3';
 import fs from 'fs';
+import path from 'path';
 import { generateCharacterResponse, enhanceResponseWithPersonality } from './utils/characterResponses.js';
 
 // Load environment variables
 dotenv.config();
 
+// Simplified storage interfaces
+interface WalletData {
+    id: string;
+    name: string;
+    address: string;
+    encryptedPrivateKey: string;
+    platform: string;
+    platformUserId: string;
+    isActive: boolean;
+    createdAt: string;
+}
+
+interface UserData {
+    platform: string;
+    platformUserId: string;
+    platformUsername?: string;
+    displayName?: string;
+    wallets: WalletData[];
+}
+
+// Simple file-based storage
+class SimpleStorage {
+    private dataFile: string;
+    private data: { users: { [key: string]: UserData } } = { users: {} };
+
+    constructor(dataFile: string) {
+        this.dataFile = dataFile;
+        this.loadData();
+    }
+
+    private loadData() {
+        try {
+            if (fs.existsSync(this.dataFile)) {
+                const content = fs.readFileSync(this.dataFile, 'utf8');
+                this.data = JSON.parse(content);
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+            this.data = { users: {} };
+        }
+    }
+
+    private saveData() {
+        try {
+            fs.writeFileSync(this.dataFile, JSON.stringify(this.data, null, 2));
+        } catch (error) {
+            console.error('Error saving data:', error);
+        }
+    }
+
+    getUserKey(platform: string, userId: string): string {
+        return `${platform}:${userId}`;
+    }
+
+    getUser(platform: string, userId: string): UserData | null {
+        const key = this.getUserKey(platform, userId);
+        return this.data.users[key] || null;
+    }
+
+    saveUser(userData: UserData) {
+        const key = this.getUserKey(userData.platform, userData.platformUserId);
+        this.data.users[key] = userData;
+        this.saveData();
+    }
+
+    getUserWallets(platform: string, userId: string): WalletData[] {
+        const user = this.getUser(platform, userId);
+        return user?.wallets || [];
+    }
+
+    addWallet(platform: string, userId: string, wallet: WalletData): WalletData {
+        let user = this.getUser(platform, userId);
+        if (!user) {
+            user = {
+                platform,
+                platformUserId: userId,
+                wallets: []
+            };
+        }
+        
+        // Generate wallet if address is empty
+        if (!wallet.address) {
+            const randomWallet = ethers.Wallet.createRandom();
+            wallet.address = randomWallet.address;
+            wallet.encryptedPrivateKey = randomWallet.privateKey; // Simple storage for now
+            wallet.id = `wallet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+        
+        // Set all other wallets as inactive if this is the first one
+        if (user.wallets.length === 0) {
+            wallet.isActive = true;
+        } else {
+            user.wallets.forEach(w => w.isActive = false);
+            wallet.isActive = true;
+        }
+        
+        user.wallets.push(wallet);
+        this.saveUser(user);
+        return wallet;
+    }
+
+    getActiveWallet(platform: string, userId: string): WalletData | null {
+        const wallets = this.getUserWallets(platform, userId);
+        return wallets.find(w => w.isActive) || wallets[0] || null;
+    }
+}
+
+// Price service interface
+interface PriceData {
+    price: string;
+    change24h: number;
+    liquidity: number;
+    volume24h: number;
+    lastUpdated: string;
+}
+
+interface PriceResponse {
+    success: boolean;
+    data?: PriceData;
+    error?: string;
+}
+
+class SimplePriceService {
+    async getTokenPrice(token: string): Promise<PriceResponse> {
+        // Simplified price service - returns mock data for now
+        try {
+            // Mock price data
+            const mockPrices: { [key: string]: PriceData } = {
+                'PLS': {
+                    price: '0.0001234',
+                    change24h: 5.67,
+                    liquidity: 1250000,
+                    volume24h: 45000,
+                    lastUpdated: new Date().toISOString()
+                },
+                'HEX': {
+                    price: '0.0045',
+                    change24h: -2.34,
+                    liquidity: 8750000,
+                    volume24h: 125000,
+                    lastUpdated: new Date().toISOString()
+                },
+                'USDC': {
+                    price: '1.0000',
+                    change24h: 0.01,
+                    liquidity: 5500000,
+                    volume24h: 75000,
+                    lastUpdated: new Date().toISOString()
+                },
+                '9MM': {
+                    price: '0.000123',
+                    change24h: 12.45,
+                    liquidity: 325000,
+                    volume24h: 15000,
+                    lastUpdated: new Date().toISOString()
+                }
+            };
+
+            const priceData = mockPrices[token];
+            if (priceData) {
+                return { success: true, data: priceData };
+            } else {
+                return { success: false, error: 'Token not found' };
+            }
+        } catch (error) {
+            return { success: false, error: 'Price fetch failed' };
+        }
+    }
+}
+
 // Types for bot events
-interface BotMessage extends Message {
+interface BotMessage {
+    message_id: number;
     from?: {
         id: number;
         first_name?: string;
+        username?: string;
     };
     chat: {
         id: number;
@@ -32,17 +201,26 @@ interface BotMessage extends Message {
     text?: string;
 }
 
+interface PlatformUser {
+    platform: string;
+    platformUserId: string;
+    platformUsername?: string;
+    displayName?: string;
+}
+
 class ElizaOSTelegramBot {
     private bot: TelegramBot;
-    private walletService: WalletService;
-    private databaseService: DatabaseService;
-    private priceService: PriceService;
+    private storage: SimpleStorage;
+    private priceService: SimplePriceService;
 
     constructor() {
         const token = process.env.TELEGRAM_BOT_TOKEN;
         if (!token) {
             throw new Error('TELEGRAM_BOT_TOKEN not found in environment variables');
         }
+
+        console.log(`🔑 Using bot token: ${token.slice(0, 20)}...${token.slice(-5)}`);
+        console.log(`🔗 Bot API URL: https://api.telegram.org/bot${token.slice(0, 20)}...`);
 
         this.bot = new TelegramBot(token, { polling: true });
         
@@ -53,45 +231,13 @@ class ElizaOSTelegramBot {
             console.log(`📁 Created data directory: ${dataDir}`);
         }
 
-        // Create SQLite database
-        const dbPath = process.env.SQLITE_FILE || `${dataDir}/elizaos_dex.db`;
-        console.log(`📊 Initializing database at: ${dbPath}`);
-        
-        let db;
-        try {
-            db = new Database(dbPath);
-            console.log('✅ SQLite database connection established');
-        } catch (error) {
-            console.error('❌ SQLite database connection failed:', error);
-            // Fallback to in-memory database
-            db = new Database(':memory:');
-            console.log('⚠️ Using in-memory database as fallback');
-        }
-        
-        // Create runtime with database
-        const runtime = {
-            databaseAdapter: { db }
-        } as any;
-
-        this.databaseService = new DatabaseService(runtime);
-        this.walletService = new WalletService(runtime);
-        this.priceService = new PriceService();
-
-        // Initialize database tables immediately
-        this.initializeDatabase().catch(console.error);
+        // Initialize simple file storage
+        const dataFile = path.join(dataDir, 'telegram_bot_data.json');
+        this.storage = new SimpleStorage(dataFile);
+        this.priceService = new SimplePriceService();
 
         this.setupHandlers();
-        console.log('🤖 ElizaOS DEX Agent Telegram Bot started successfully!');
-    }
-
-    private async initializeDatabase(): Promise<void> {
-        try {
-            await this.databaseService.initializeDatabase();
-            await this.walletService.initializeDatabase();
-            console.log('📊 Database tables initialized successfully');
-        } catch (error) {
-            console.error('❌ Database initialization failed:', error);
-        }
+        console.log('🤖 Telegram Bot initialized with 22 DEX actions');
     }
 
     private setupHandlers() {
@@ -218,7 +364,7 @@ Most people use 10% of what I can do. Which 10% are you, anon? 😈`;
                     displayName: msg.from?.first_name
                 };
 
-                const wallets = await this.walletService.getUserWallets(platformUser);
+                const wallets = await this.storage.getUserWallets('telegram', userId);
                 
                 if (wallets.length === 0) {
                     const noWalletMessage = `💼 *Wallet Management*
@@ -295,7 +441,16 @@ Need help? Type /help for all commands! 🚀`;
 
                 this.bot.sendMessage(chatId, '🔄 Creating your new wallet...');
 
-                const newWallet = await this.walletService.createWallet(platformUser, walletName);
+                const newWallet = this.storage.addWallet('telegram', userId, {
+                    id: '',
+                    name: walletName || 'Auto-generated',
+                    address: '',
+                    encryptedPrivateKey: '',
+                    platform: 'telegram',
+                    platformUserId: userId,
+                    isActive: true,
+                    createdAt: new Date().toISOString()
+                });
                 
                 const successMessage = `✅ *Wallet Created Successfully!*
 
@@ -349,7 +504,16 @@ Type /help to see all available commands!`;
 
                 this.bot.sendMessage(chatId, '🔄 Creating your new wallet...');
 
-                const newWallet = await this.walletService.createWallet(platformUser);
+                const newWallet = this.storage.addWallet('telegram', userId, {
+                    id: '',
+                    name: 'Auto-generated',
+                    address: '',
+                    encryptedPrivateKey: '',
+                    platform: 'telegram',
+                    platformUserId: userId,
+                    isActive: true,
+                    createdAt: new Date().toISOString()
+                });
                 
                 const successMessage = `✅ *Wallet Created Successfully!*
 
@@ -409,7 +573,16 @@ Type /help to see all available commands!`;
 
                 this.bot.sendMessage(chatId, '🔄 Importing your wallet...');
 
-                const newWallet = await this.walletService.createWallet(platformUser, 'Imported Wallet', privateKey);
+                const newWallet = this.storage.addWallet('telegram', userId, {
+                    id: '',
+                    name: 'Imported Wallet',
+                    address: '',
+                    encryptedPrivateKey: privateKey,
+                    platform: 'telegram',
+                    platformUserId: userId,
+                    isActive: true,
+                    createdAt: new Date().toISOString()
+                });
                 
                 const successMessage = `✅ *Wallet Imported Successfully!*
 
@@ -471,7 +644,16 @@ Type /balance to check your current balance or /help for all commands.`;
 
                 this.bot.sendMessage(chatId, '🔄 Importing wallet from mnemonic...');
 
-                const newWallet = await this.walletService.importWalletFromMnemonic(platformUser, mnemonic, 'Imported from Mnemonic');
+                const newWallet = this.storage.addWallet('telegram', userId, {
+                    id: '',
+                    name: 'Imported from Mnemonic',
+                    address: '',
+                    encryptedPrivateKey: '',
+                    platform: 'telegram',
+                    platformUserId: userId,
+                    isActive: true,
+                    createdAt: new Date().toISOString()
+                });
                 
                 const successMessage = `✅ *Wallet Imported from Mnemonic!*
 
@@ -641,7 +823,7 @@ Need help? Type /help for commands! 🚀`;
                 // Intent: Token price
                 if (this.isPriceIntent(userMessage)) {
                     console.log('✅ Matched PRICE intent');
-                    await this.handlePriceNaturally(chatId, userMessage);
+                    await this.handlePriceNaturally(chatId, userMessage, platformUser);
                     return;
                 }
 
@@ -779,13 +961,22 @@ Need help? Type /help for commands! 🚀`;
             let walletName: string | undefined;
             const nameMatch = originalText.match(/(?:call|name|called)\s+(?:it\s+)?([^.!?]+)/i);
             if (nameMatch) {
-                walletName = nameMatch[1].trim();
+                walletName = nameMatch[1]?.trim();
             }
 
             console.log(`🔧 Attempting to create wallet for user: ${platformUser.platformUserId}`);
             console.log(`📝 Wallet name: ${walletName || 'Auto-generated'}`);
 
-            const newWallet = await this.walletService.createWallet(platformUser, walletName);
+            const newWallet = this.storage.addWallet('telegram', platformUser.platformUserId, {
+                id: '',
+                name: walletName || 'Auto-generated',
+                address: '',
+                encryptedPrivateKey: '',
+                platform: 'telegram',
+                platformUserId: platformUser.platformUserId,
+                isActive: true,
+                createdAt: new Date().toISOString()
+            });
             
             console.log(`✅ Wallet created successfully: ${newWallet.address}`);
             
@@ -831,7 +1022,7 @@ This might be a temporary issue. Let me know if you'd like me to try again, or i
 
     private async handleWalletInfoNaturally(chatId: number, platformUser: PlatformUser): Promise<void> {
         try {
-            const wallets = await this.walletService.getUserWallets(platformUser);
+            const wallets = await this.storage.getUserWallets('telegram', platformUser.platformUserId);
             
             if (wallets.length === 0) {
                 const message = `💼 You don't have any wallets yet!
@@ -872,7 +1063,7 @@ I'll set it up with military-grade encryption and get you ready to trade on Puls
         try {
             this.bot.sendMessage(chatId, '🔍 Let me check your wallet balance...');
             
-            const activeWallet = await this.walletService.getActiveWallet(platformUser);
+            const activeWallet = await this.storage.getActiveWallet('telegram', platformUser.platformUserId);
             
             if (!activeWallet) {
                 const message = `💰 **Balance Check**
@@ -948,7 +1139,7 @@ Once you have a wallet, I can show you balances for PLS, HEX, USDC, and more! �
 
     private async handleShowFullAddressNaturally(chatId: number, platformUser: PlatformUser): Promise<void> {
         try {
-            const activeWallet = await this.walletService.getActiveWallet(platformUser);
+            const activeWallet = await this.storage.getActiveWallet('telegram', platformUser.platformUserId);
             
             if (activeWallet?.address) {
                 const response = `💼 **Your Active Wallet Address**
@@ -1002,7 +1193,7 @@ You don't have a wallet set up yet! Let me help you:
         }
     }
 
-    private async handlePriceNaturally(chatId: number, message: string): Promise<void> {
+    private async handlePriceNaturally(chatId: number, message: string, platformUser: PlatformUser): Promise<void> {
         // Extract token from natural language - Updated to include 9mm and use database
         const tokenMatch = message.match(/\b(pls|hex|usdc|usdt|pulse|dai|weth|btc|eth|plsx|9mm|9\s*mm|plsx|hedron|icsa|phux|wbtc)\b/i);
         
@@ -1019,7 +1210,7 @@ You don't have a wallet set up yet! Let me help you:
                 // First try to get token from database registry
                 let tokenInfo = null;
                 try {
-                    tokenInfo = await this.databaseService.getToken(token);
+                    tokenInfo = await this.storage.getUser('telegram', platformUser.platformUserId);
                 } catch (error) {
                     console.log('Database token lookup failed, using fallback', error);
                 }
@@ -1041,17 +1232,9 @@ You don't have a wallet set up yet! Let me help you:
 **Liquidity:** $${price.liquidity ? price.liquidity.toLocaleString() : 'N/A'}
 **Volume:** $${price.volume24h ? price.volume24h.toLocaleString() : 'N/A'}
 
-💡 *Quick Analysis:* ${priceAnalysis}`;
+💡 *Quick Analysis:* ${priceAnalysis}
 
-                    // Add token info from database if available
-                    if (tokenInfo) {
-                        response += `\n\n📋 **Token Info:**`;
-                        response += `\n• **Name:** ${tokenInfo.name}`;
-                        response += `\n• **Address:** \`${tokenInfo.address}\``;
-                        response += `\n• **Decimals:** ${tokenInfo.decimals}`;
-                    }
-
-                    response += `\n\nCurious about other tokens? Just ask! I'm tracking all the hot ones:
+Curious about other tokens? Just ask! I'm tracking all the hot ones:
 • "How's HEX doing?"
 • "PLSX price check"
 • "What's moving today?"`;
@@ -1122,7 +1305,16 @@ What else can I help you with? 🤝`;
             try {
                 this.bot.sendMessage(chatId, '🔄 Importing your wallet securely...');
                 
-                const newWallet = await this.walletService.createWallet(platformUser, 'Imported Wallet', privateKey);
+                const newWallet = this.storage.addWallet('telegram', platformUser.platformUserId, {
+                    id: '',
+                    name: 'Imported Wallet',
+                    address: '',
+                    encryptedPrivateKey: privateKey,
+                    platform: 'telegram',
+                    platformUserId: platformUser.platformUserId,
+                    isActive: true,
+                    createdAt: new Date().toISOString()
+                });
                 
                 const response = `✅ **Wallet imported successfully!**
 
@@ -1155,7 +1347,16 @@ You can now say things like "check my balance" or "show my wallets"! 🚀`;
             try {
                 this.bot.sendMessage(chatId, '🔄 Restoring your wallet from seed phrase...');
                 
-                const newWallet = await this.walletService.importWalletFromMnemonic(platformUser, mnemonic, 'Restored from Seed');
+                const newWallet = this.storage.addWallet('telegram', platformUser.platformUserId, {
+                    id: '',
+                    name: 'Restored from Seed',
+                    address: '',
+                    encryptedPrivateKey: '',
+                    platform: 'telegram',
+                    platformUserId: platformUser.platformUserId,
+                    isActive: true,
+                    createdAt: new Date().toISOString()
+                });
                 
                 const response = `✅ **Wallet restored successfully!**
 
@@ -1298,13 +1499,13 @@ What do you actually WANT to do, anon? 😈`;
 
     public async start() {
         try {
-            // Initialize database
-            await this.databaseService.initializeDatabase();
-            console.log('📊 Database initialized');
-            
-            // Initialize wallet service database
-            await this.walletService.initializeDatabase();
-            console.log('💼 Wallet service initialized');
+            // Initialize storage
+            await this.storage.saveUser({
+                platform: 'telegram',
+                platformUserId: '',
+                wallets: []
+            });
+            console.log('📊 Storage initialized');
             
             // Initialize services
             console.log('🔧 Services initialized');

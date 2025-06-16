@@ -181,10 +181,26 @@ ${mockPositions.activeLPPositions.map((pos, i) => {
 
             } else if (text.includes('details') || text.includes('hex')) {
                 const hexPosition = mockPositions.activeLPPositions[0];
-                responseText = `🔍 **HEX/USDC Position Details**
+                if (!hexPosition) {
+                    responseText = `❌ **No HEX/USDC Position Found**
+
+You don't currently have any HEX/USDC liquidity positions.
+
+**Create a Position:**
+• Add liquidity to HEX/USDC pool
+• Choose price range for fee earning
+• Monitor position performance
+
+**Other Available Positions:**
+• Check "position overview" for all positions
+• View "portfolio summary" for total stats
+
+Would you like to see all your active positions instead?`;
+                } else {
+                    responseText = `🔍 **HEX/USDC Position Details**
 
 **📋 Position Info:**
-• Pool: ${hexPosition.pool} (0.3% fee tier)
+• Pool: ${hexPosition.pool} (0.3% fee tier)  
 • Token ID: #${hexPosition.tokenId}
 • Entry Date: ${hexPosition.entryDate}
 • Days Active: ${hexPosition.daysActive}
@@ -219,6 +235,7 @@ ${hexPosition.priceRange.inRange ?
 • "Rebalance range" - Update price range
 • "Exit position" - Close position
 • "Add liquidity" - Increase position size`;
+                }
 
             } else {
                 responseText = `📈 **Position Tracking Hub**
@@ -272,11 +289,11 @@ ${hexPosition.priceRange.inRange ?
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Show my LP positions" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll show you all your active liquidity provider positions with performance metrics and P&L analysis.",
                     action: "POSITION_TRACKING"
@@ -285,11 +302,11 @@ ${hexPosition.priceRange.inRange ?
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Track HEX/USDC position performance" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Let me analyze your HEX/USDC position including fees earned, impermanent loss, and current range status.",
                     action: "POSITION_TRACKING"
@@ -298,11 +315,11 @@ ${hexPosition.priceRange.inRange ?
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Show LP profit and loss" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll provide a comprehensive P&L breakdown of your liquidity provider positions.",
                     action: "POSITION_TRACKING"

@@ -175,8 +175,9 @@ export class WalletStorage {
     }
 
     getActiveWallet(): StoredWallet | null {
-        if (!this.walletStore.activeWalletId) return null;
-        return this.getWallet(this.walletStore.activeWalletId);
+        const activeId = this.walletStore.activeWalletId;
+        if (!activeId) return null;
+        return this.getWallet(activeId);
     }
 
     getAllWallets(): Record<string, StoredWallet> {

@@ -39,8 +39,8 @@ const portfolioAction: Action = {
             const positionManager = new NineMmV3PositionManager();
             
             // Create platform user and get wallets using new system
-            const platformUser = createPlatformUser(runtime, message);
-            const walletService = new WalletService(runtime);
+            const platformUser = createPlatformUser(runtime as any, message);
+            const walletService = new WalletService(runtime as any);
             
             // Get user wallets
             const userWallets = await walletService.getUserWallets(platformUser);
@@ -138,11 +138,11 @@ ${demoPortfolio.topTokens.map((token, i) =>
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Show my portfolio" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {   
                     text: "I'll show you a comprehensive overview of your portfolio including tokens, liquidity positions, and performance metrics.",
                     action: "PORTFOLIO_OVERVIEW"
@@ -151,11 +151,11 @@ ${demoPortfolio.topTokens.map((token, i) =>
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Portfolio summary" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Let me generate your portfolio summary with total value, active positions, and performance analytics.",
                     action: "PORTFOLIO_OVERVIEW"
@@ -164,11 +164,11 @@ ${demoPortfolio.topTokens.map((token, i) =>
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "All my assets" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll compile all your assets across tokens and liquidity positions with current values and performance.",
                     action: "PORTFOLIO_OVERVIEW"

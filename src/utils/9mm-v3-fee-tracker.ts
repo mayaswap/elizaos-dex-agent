@@ -159,7 +159,8 @@ export class NineMmV3FeeTracker {
       const totalUSD = snapshots.reduce((sum, s) => sum + parseFloat(s.totalFeesUSD), 0);
 
       // Calculate earning rates
-      const earningRate = this.calculateEarningRates(snapshots, result.position.transaction.timestamp);
+      const timestamp = result.position?.transaction?.timestamp || '0';
+      const earningRate = this.calculateEarningRates(snapshots, timestamp);
 
       return {
         positionId,

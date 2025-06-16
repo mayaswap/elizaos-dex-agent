@@ -158,11 +158,11 @@ I couldn't extract the token and price from your message.
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Yes, start monitoring HEX at $0.005" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll activate real-time price monitoring for HEX at $0.005 and alert you when the target is reached.",
                     action: "START_MONITORING"
@@ -171,11 +171,11 @@ I couldn't extract the token and price from your message.
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Monitor PLS when it hits $0.0001" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Setting up price monitoring for PLS at $0.0001 with real-time alerts when the target price is reached.",
                     action: "START_MONITORING"
@@ -184,11 +184,11 @@ I couldn't extract the token and price from your message.
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Start tracking PLSX price for $0.00015" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "Activating background price monitoring for PLSX at $0.00015 with immediate notifications when triggered.",
                     action: "START_MONITORING"

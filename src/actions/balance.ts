@@ -40,14 +40,52 @@ const balanceAction: Action = {
         callback?: HandlerCallback
     ) => {
         try {
-            const userMessage = message.content?.text || "";
+            let responseText = "";
+            
+            // Get user message and parse it
+            const userMessage = message.content?.text?.toLowerCase() || '';
+            
+            if (!userMessage) {
+                responseText = "❌ I need a message to check balance. Try: 'Check my balance' or 'What's my PLS balance?'";
+                if (callback) {
+                    callback({
+                        text: responseText,
+                        content: { text: responseText }
+                    } as Content);
+                }
+                return true;
+            }
+            
+            // Parse the balance request
             const parsed = await parseCommand(userMessage);
             
-            // Create platform user from message context
-            const platformUser = createPlatformUser(runtime, message);
+            // Get user's platform info
+            const platformUser = createPlatformUser(runtime as any, message);
             
-            // Initialize wallet service
-            const walletService = new WalletService(runtime);
+            // Get wallet service
+            const walletService = new WalletService(runtime as any);
+            const userWallets = await walletService.getUserWallets(platformUser);
+            
+            if (userWallets.length === 0) {
+                responseText = `💰 **Balance Check**
+
+I need a wallet to check balances.
+
+**Options:**
+• "Create a wallet for me" (I'll remember it for future balance checks)
+• "Check balance of 0x742d35Cc6635C0532925a3b8D357376C326910b2f" 
+• Import your existing wallet first
+
+**Note:** Once you create or import a wallet, I'll remember it for easy balance checking!`;
+                
+                if (callback) {
+                    callback({
+                        text: responseText,
+                        content: { text: responseText }
+                    } as Content);
+                }
+                return true;
+            }
             
             // Get user's active wallet address
             let walletAddress: string | null = null;
@@ -68,8 +106,6 @@ const balanceAction: Action = {
                 walletAddress = addressMatch[0];
                 console.log(`🎯 Using address from message: ${walletAddress}`);
             }
-            
-            let responseText = "";
             
             if (!walletAddress) {
                 responseText = `💰 **Balance Check**
@@ -197,13 +233,13 @@ Sorry, I encountered an error while checking your balance. Please try again or:
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: {
                     text: "What's my balance?"
                 }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: {
                     text: "I'll check your wallet balance across all major tokens on PulseChain!"
                 }
@@ -211,13 +247,13 @@ Sorry, I encountered an error while checking your balance. Please try again or:
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: {
                     text: "Check balance of 0x742d35Cc6635C0532925a3b8D357376C326910b2f"
                 }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: {
                     text: "Checking balance for the specified wallet address..."
                 }

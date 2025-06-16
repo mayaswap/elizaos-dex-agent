@@ -1,12 +1,7 @@
 import {
     AgentRuntime,
-    CacheManager,
-    DbCacheAdapter,
     elizaLogger,
-    FsCacheAdapter,
     Character,
-    defaultCharacter,
-    ModelProviderName,
 } from "@elizaos/core";
 import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { PostgresDatabaseAdapter } from "@elizaos/adapter-postgres";
@@ -16,15 +11,26 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
+import Database from "better-sqlite3";
 
-// Import our actions
+// Import our actions and services
 import { actions } from "./actions/index.js";
+import { WalletService } from './services/walletService.js';
+import { DatabaseService } from './services/databaseService.js';
 
 // Load environment variables
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Service registry attached to runtime
+export interface ExtendedRuntime extends AgentRuntime {
+    customServices?: {
+        database: DatabaseService;
+        wallet: WalletService;
+    };
+}
 
 /**
  * ElizaOS DEX Trading Agent - Production Telegram Deployment
@@ -33,7 +39,7 @@ const __dirname = path.dirname(__filename);
  * with proper Telegram integration using TelegramClientInterface.
  */
 
-async function createAgent(): Promise<AgentRuntime> {
+async function createAgent(): Promise<ExtendedRuntime> {
     elizaLogger.info("🚀 Starting ElizaOS DEX Trading Agent - Production Deployment");
 
     try {
@@ -53,7 +59,6 @@ async function createAgent(): Promise<AgentRuntime> {
         } catch (error) {
             elizaLogger.warn("Failed to load character file, using default");
             character = {
-                ...defaultCharacter,
                 name: "DEX Master",
                 username: "dexmaster",
                 bio: [
@@ -62,14 +67,24 @@ async function createAgent(): Promise<AgentRuntime> {
                     "I support PulseChain and 9mm DEX with comprehensive analytics and wallet management."
                 ],
                 system: "You are DEX Master, an expert AI trading assistant. Help users with DeFi trading, token analysis, and portfolio management.",
-                modelProvider: ModelProviderName.ANTHROPIC,
                 settings: {
-                    secrets: {},
+                    secrets: {
+                        TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN
+                    },
                     voice: {
                         model: "en_US-hfc_female-medium"
                     }
-                }
-            };
+                },
+                lore: [],
+                messageExamples: [],
+                postExamples: [],
+                style: {
+                    all: ["professional", "helpful", "technical"],
+                    chat: ["friendly", "informative"],
+                    post: ["analytical", "insightful"]
+                },
+                topics: ["defi", "trading", "cryptocurrency", "blockchain"]
+            } as Character;
         }
 
         // Validate required environment variables
@@ -80,49 +95,58 @@ async function createAgent(): Promise<AgentRuntime> {
             throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
         }
 
-        // Configure database adapter - Follow ElizaOS patterns
-        let db;
+        // Database setup - PostgreSQL or SQLite
+        let databaseAdapter: any;
         if (process.env.POSTGRES_URL) {
-            elizaLogger.info("🗄️ Using PostgreSQL database (Supabase)");
-            db = new PostgresDatabaseAdapter({
+            elizaLogger.info('🗄️ Using PostgreSQL database (Supabase)');
+            databaseAdapter = new PostgresDatabaseAdapter({
                 connectionString: process.env.POSTGRES_URL,
             });
         } else {
-            elizaLogger.info("🗄️ Using SQLite database (development)");
-            const dataDir = process.env.SQLITE_DATA_DIR || "./data";
+            elizaLogger.info('🗄️ Using SQLite database (development)');
+            const dataDir = process.env.SQLITE_DATA_DIR || './data';
+            const dbPath = path.join(dataDir, 'elizaos_dex.db');
+            
+            // Ensure data directory exists
             if (!fs.existsSync(dataDir)) {
                 fs.mkdirSync(dataDir, { recursive: true });
             }
-            db = new SqliteDatabaseAdapter(path.join(dataDir, "elizaos.db"));
+            
+            elizaLogger.info(`📊 Database: ${dbPath}`);
+            const sqliteDb = new Database(dbPath);
+            databaseAdapter = new SqliteDatabaseAdapter(sqliteDb);
         }
 
-        // Configure cache manager - Follow ElizaOS patterns
-        let cache: CacheManager;
-        if (db) {
-            cache = new CacheManager(new DbCacheAdapter(db));
-        } else {
-            cache = new CacheManager(new FsCacheAdapter("./cache"));
-        }
+        // Create runtime
+        const runtime = new AgentRuntime({
+            character,
+            adapter: databaseAdapter as any,
+            plugins: [
+                bootstrapPlugin,
+            ],
+        }) as ExtendedRuntime;
+
+        elizaLogger.info('✅ ElizaOS Runtime created');
+
+        // Initialize our services
+        const databaseService = new DatabaseService(runtime as any);
+        await databaseService.initializeDatabase();
+        elizaLogger.info('📊 Database service initialized');
+
+        const walletService = new WalletService(runtime as any);
+        await walletService.initializeDatabase();
+        elizaLogger.info('💼 Wallet service initialized');
+
+        // Attach services to runtime for action access
+        runtime.customServices = {
+            database: databaseService,
+            wallet: walletService
+        };
+        elizaLogger.info('🔗 Services attached to runtime');
 
         // Get all actions
         const actionList = await actions();
         elizaLogger.info(`📊 Loaded ${actionList.length} trading actions`);
-
-        // Create agent runtime - Follow ElizaOS architecture
-        const runtime = new AgentRuntime({
-            databaseAdapter: db,
-            token: process.env.TELEGRAM_BOT_TOKEN!,
-            modelProvider: ModelProviderName.ANTHROPIC, // Use Anthropic as primary
-            character,
-            plugins: [
-                bootstrapPlugin,
-            ],
-            providers: [],
-            actions: actionList,
-            services: [],
-            managers: [],
-            cacheManager: cache,
-        });
 
         elizaLogger.info("✅ Agent runtime created successfully");
         return runtime;
@@ -137,43 +161,44 @@ async function startTelegramBot(): Promise<void> {
     try {
         elizaLogger.info("🤖 Starting Telegram bot with ElizaOS TelegramClientInterface...");
 
-        // Create the agent runtime
+        // Create the agent runtime with database services
         const runtime = await createAgent();
 
         // Create Telegram client - Follow official ElizaOS pattern
         elizaLogger.info("🔧 Creating TelegramClientInterface...");
         elizaLogger.info(`📱 Bot Token: ${process.env.TELEGRAM_BOT_TOKEN ? 'Present' : 'Missing'}`);
+        elizaLogger.info(`📱 Bot Token (first 20 chars): ${process.env.TELEGRAM_BOT_TOKEN?.substring(0, 20)}...`);
         
-        const telegramClient = new TelegramClientInterface(runtime, process.env.TELEGRAM_BOT_TOKEN!);
+        const telegramClient = TelegramClientInterface;
 
         elizaLogger.info("✅ Telegram client created");
 
         // Start the client - ElizaOS standard pattern
         elizaLogger.info("🚀 Starting Telegram client...");
-        await telegramClient.start();
+        await telegramClient.start(runtime as any);
 
         elizaLogger.info("🎉 DEX Trading Agent is live on Telegram!");
         elizaLogger.info("📱 Bot is ready to receive commands");
-        elizaLogger.info("💡 Try sending: 'What's the price of HEX?'");
+        elizaLogger.info("💡 Try sending: 'create new wallet'");
 
         // Log available commands
         elizaLogger.info("🎯 Available Commands:");
-        elizaLogger.info("  • Price checks: 'HEX price', 'What's PLS worth?'");
-        elizaLogger.info("  • Wallet: 'show balance', 'create wallet'");
+        elizaLogger.info("  • Wallet: 'create new wallet', 'list wallets'");
+        elizaLogger.info("  • Price checks: 'price of HEX', 'What's PLS worth?'");
         elizaLogger.info("  • Trading: 'swap 100 PLS for HEX'");
+        elizaLogger.info("  • Balance: 'show my balance'");
         elizaLogger.info("  • Analytics: 'show trading history'");
-        elizaLogger.info("  • Alerts: 'create price alert for PLS at $0.0001'");
 
         // Graceful shutdown handling
         process.on('SIGINT', async () => {
             elizaLogger.info("🛑 Shutting down Telegram bot...");
-            await telegramClient.stop();
+            await telegramClient.stop(runtime as any);
             process.exit(0);
         });
 
         process.on('SIGTERM', async () => {
             elizaLogger.info("🛑 Received SIGTERM, shutting down gracefully...");
-            await telegramClient.stop();
+            await telegramClient.stop(runtime as any);
             process.exit(0);
         });
 

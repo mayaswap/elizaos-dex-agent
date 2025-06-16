@@ -51,8 +51,8 @@ const walletAction: Action = {
                 const lowerText = userMessage.toLowerCase();
                 
                 // Create platform user and check for existing wallets
-                const platformUser = createPlatformUser(runtime, message);
-                const walletService = new WalletService(runtime);
+                const platformUser = createPlatformUser(runtime as any, message);
+                const walletService = new WalletService(runtime as any);
                 
                 let existingWallet: any = null;
                 try {
@@ -189,13 +189,13 @@ Sorry, I encountered an error while handling your wallet request. Please try aga
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: {
                     text: "Create a wallet for me"
                 }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: {
                     text: "🎉 New wallet created! Address: 0x... Private Key: 0x... Keep your private key safe!"
                 }
@@ -203,13 +203,13 @@ Sorry, I encountered an error while handling your wallet request. Please try aga
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: {
                     text: "What's my balance?"
                 }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: {
                     text: "To check your balance, I need your wallet address. Create a wallet first if you don't have one!"
                 }

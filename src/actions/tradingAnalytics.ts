@@ -40,8 +40,8 @@ const tradingAnalyticsAction: Action = {
     ) => {
         try {
             const text = message.content.text.toLowerCase();
-            const platformUser = createPlatformUser(runtime, message);
-            const dbService = new DatabaseService(runtime);
+            const platformUser = createPlatformUser(runtime as any, message);
+            const dbService = new DatabaseService(runtime as any);
             await dbService.initializeDatabase();
             
             let responseText = '';
@@ -221,21 +221,21 @@ If the issue persists, please check your database connection.`
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "show my trading history" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "Here's your complete trading history with performance analytics and insights." }
             }
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "trading performance stats" }
             },
             {
-                user: "{{user2}}",
+                name: "{{user2}}",
                 content: { text: "Your trading performance metrics including success rate, gas efficiency, and recommendations." }
             }
         ]

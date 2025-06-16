@@ -12,7 +12,7 @@ const MAX_CACHE_SIZE = 100; // Maximum cache entries to prevent memory leaks
  */
 
 export interface ParsedCommand {
-  intent: 'swap' | 'price' | 'balance' | 'portfolio' | 'help' | 'addLiquidity' | 'removeLiquidity' | 'poolQuery' | 'wallet' | 'address' | 'unknown';
+  intent: 'swap' | 'price' | 'balance' | 'portfolio' | 'help' | 'addLiquidity' | 'removeLiquidity' | 'poolQuery' | 'wallet' | 'address' | 'unknown' | 'general_conversation';
   fromToken?: string;
   toToken?: string;
   amount?: string;

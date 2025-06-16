@@ -253,11 +253,11 @@ ${mockAllowanceData.recommendations.map(rec => {
     examples: [
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Check my token allowances" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll show you all your current token approvals and any security recommendations.",
                     action: "TOKEN_ALLOWANCE"
@@ -266,11 +266,11 @@ ${mockAllowanceData.recommendations.map(rec => {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Revoke USDC approval" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll help you revoke the USDC spending permission from the DEX contract for security.",
                     action: "TOKEN_ALLOWANCE"
@@ -279,11 +279,11 @@ ${mockAllowanceData.recommendations.map(rec => {
         ],
         [
             {
-                user: "{{user1}}",
+                name: "{{user1}}",
                 content: { text: "Set HEX allowance to 1000" }
             },
             {
-                user: "{{agent}}",
+                name: "{{agent}}",
                 content: {
                     text: "I'll set a limited spending allowance of 1000 HEX for the DEX router instead of unlimited approval.",
                     action: "TOKEN_ALLOWANCE"
