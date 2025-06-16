@@ -1,5 +1,6 @@
-import { elizaLogger, IAgentRuntime } from '@elizaos/core';
+import { elizaLogger, IAgentRuntime, Memory } from '@elizaos/core';
 import { createDatabaseAdapter, ElizaOSDatabaseAdapter } from './databaseAdapter.js';
+import { IExtendedRuntime, IExtendedMemory } from '../types/extended.js';
 import crypto from 'crypto';
 import { ethers } from 'ethers';
 
@@ -113,7 +114,7 @@ export class WalletService {
      * PostgreSQL: true/false, 't'/'f', 1/0, '1'/'0', 'TRUE'/'FALSE'
      * SQLite: 1/0
      */
-    private parseBooleanField(value: any): boolean {
+    private parseBooleanField(value: string | number | boolean | null | undefined): boolean {
         // Debug logging to understand what we're getting
         elizaLogger.info(`🔍 Parsing boolean field: value="${value}", type="${typeof value}"`);
         
@@ -188,8 +189,8 @@ export class WalletService {
             elizaLogger.info(`🔄 Deactivating existing wallets for user ${userPlatformId}`);
             await this.db.update(`
                 UPDATE wallets 
-                SET isActive = FALSE 
-                WHERE userPlatformId = $1
+                SET isActive = 0 
+                WHERE userplatformid = $1
             `, [userPlatformId]);
         }
 
@@ -228,15 +229,18 @@ export class WalletService {
             // Query wallets from database
             const result = await this.db.query(`
                 SELECT * FROM wallets 
-                WHERE userPlatformId = $1 
-                ORDER BY createdAt ASC
+                WHERE userplatformid = $1 
+                ORDER BY createdat ASC
             `, [userPlatformId]);
             const wallets = result.rows;
 
             return wallets.map(wallet => {
+                elizaLogger.info(`🔍 Raw wallet from DB: id=${wallet.id}, keys=${Object.keys(wallet).join(',')}`);
+                elizaLogger.info(`🔍 encryptedPrivateKey value: "${wallet.encryptedPrivateKey || wallet.encryptedprivatekey}" (type: ${typeof (wallet.encryptedPrivateKey || wallet.encryptedprivatekey)})`);
+                
                 let settings;
                 try {
-                    settings = JSON.parse(wallet.settings);
+                    settings = JSON.parse(wallet.settings as string);
                 } catch (error) {
                     elizaLogger.error(`Failed to parse wallet settings for wallet ${wallet.id}:`, error);
                     // Fallback to default settings
@@ -255,11 +259,18 @@ export class WalletService {
                 }
                 
                 return {
-                    ...wallet,
+                    id: wallet.id as string,
+                    name: wallet.name as string,
+                    address: wallet.address as string,
+                    encryptedPrivateKey: (wallet.encryptedPrivateKey || wallet.encryptedprivatekey) as string,
+                    userPlatformId: (wallet.userPlatformId || wallet.userplatformid) as string,
+                    platform: wallet.platform as string,
+                    platformUserId: (wallet.platformUserId || wallet.platformuserid) as string,
+                    platformUsername: (wallet.platformUsername || wallet.platformusername) as string | undefined,
                     settings,
-                    createdAt: new Date(wallet.createdAt),
-                    lastUsed: new Date(wallet.lastUsed),
-                    isActive: this.parseBooleanField(wallet.isActive)
+                    createdAt: new Date((wallet.createdAt || wallet.createdat) as string | number | Date),
+                    lastUsed: new Date((wallet.lastUsed || wallet.lastused) as string | number | Date),
+                    isActive: this.parseBooleanField((wallet.isActive || wallet.isactive) as string | number | boolean)
                 };
             });
         } catch (error) {
@@ -282,7 +293,7 @@ export class WalletService {
             // Force the first wallet to be active in database
             await this.db.update(`
                 UPDATE wallets 
-                SET isActive = TRUE 
+                SET isActive = 1 
                 WHERE id = $1
             `, [wallets[0].id]);
             
@@ -316,7 +327,7 @@ export class WalletService {
                     // First verify the wallet exists and belongs to the user
                     const walletExists = await this.db.queryOne(`
                         SELECT id FROM wallets 
-                        WHERE id = $1 AND userPlatformId = $2
+                        WHERE id = $1 AND userplatformid = $2
                     `, [walletId, userPlatformId]);
 
                     elizaLogger.info(`📋 Wallet exists check: ${walletExists ? 'YES' : 'NO'}`);
@@ -328,8 +339,8 @@ export class WalletService {
                     // Deactivate all wallets for this user
                     const deactivatedCount = await this.db.update(`
                         UPDATE wallets 
-                        SET isActive = FALSE 
-                        WHERE userPlatformId = $1
+                        SET isActive = 0 
+                        WHERE userplatformid = $1
                     `, [userPlatformId]);
 
                     elizaLogger.info(`🔄 Deactivated ${deactivatedCount} wallets for user ${userPlatformId}`);
@@ -337,8 +348,8 @@ export class WalletService {
                     // Activate the selected wallet
                     const changes = await this.db.update(`
                         UPDATE wallets 
-                        SET isActive = TRUE, lastUsed = $1 
-                        WHERE id = $2 AND userPlatformId = $3
+                        SET isActive = 1, lastUsed = $1 
+                        WHERE id = $2 AND userplatformid = $3
                     `, [new Date().toISOString(), walletId, userPlatformId]);
 
                     elizaLogger.info(`✅ Activated wallet ${walletId}: ${changes} rows changed`);
@@ -350,7 +361,7 @@ export class WalletService {
                     // Verify the change
                     const verifyWallet = await this.db.queryOne(`
                         SELECT id, isActive FROM wallets 
-                        WHERE id = $1 AND userPlatformId = $2
+                        WHERE id = $1 AND userplatformid = $2
                     `, [walletId, userPlatformId]);
 
                     elizaLogger.info(`🔍 Verification - wallet ${walletId} isActive: ${verifyWallet?.isActive} (type: ${typeof verifyWallet?.isActive})`);
@@ -389,6 +400,14 @@ export class WalletService {
             : await this.getActiveWallet(platformUser);
 
         if (!wallet) {
+            elizaLogger.error("❌ No wallet found for getWalletPrivateKey");
+            return null;
+        }
+
+        elizaLogger.info(`🔍 Wallet data: id=${wallet.id}, address=${wallet.address}, hasEncryptedKey=${!!wallet.encryptedPrivateKey}, keyLength=${wallet.encryptedPrivateKey?.length || 0}`);
+
+        if (!wallet.encryptedPrivateKey) {
+            elizaLogger.error("❌ Wallet found but encryptedPrivateKey is missing or null");
             return null;
         }
 
@@ -396,6 +415,7 @@ export class WalletService {
             return this.decrypt(wallet.encryptedPrivateKey);
         } catch (error) {
             elizaLogger.error("Error decrypting wallet private key:", error);
+            elizaLogger.error("Encrypted key value:", wallet.encryptedPrivateKey);
             return null;
         }
     }
@@ -427,7 +447,7 @@ export class WalletService {
             const changes = await this.db.update(`
                 UPDATE wallets 
                 SET settings = $1 
-                WHERE id = $2 AND userPlatformId = $3
+                WHERE id = $2 AND userplatformid = $3
             `, [
                 JSON.stringify(updatedSettings),
                 walletId,
@@ -460,7 +480,7 @@ export class WalletService {
         try {
             const changes = await this.db.update(`
                 DELETE FROM wallets 
-                WHERE id = $1 AND userPlatformId = $2
+                WHERE id = $1 AND userplatformid = $2
             `, [walletId, targetWallet.userPlatformId]);
 
             // If the deleted wallet was active, activate another one
@@ -502,9 +522,9 @@ export class WalletService {
         try {
             await this.db.insert(`
                 INSERT INTO wallets (
-                    id, name, address, encryptedPrivateKey, userPlatformId,
-                    platform, platformUserId, platformUsername, settings,
-                    createdAt, lastUsed, isActive
+                    id, name, address, encryptedprivatekey, userplatformid,
+                    platform, platformuserid, platformusername, settings,
+                    createdat, lastused, isactive
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             `, [
                 wallet.id,
@@ -518,7 +538,7 @@ export class WalletService {
                 JSON.stringify(wallet.settings),
                 wallet.createdAt.toISOString(),
                 wallet.lastUsed.toISOString(),
-                wallet.isActive
+                wallet.isActive ? 1 : 0
             ]);
         } catch (error) {
             elizaLogger.error("Error storing wallet:", error);
@@ -536,20 +556,20 @@ export class WalletService {
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     address TEXT NOT NULL,
-                    encryptedPrivateKey TEXT NOT NULL,
-                    userPlatformId TEXT NOT NULL,
+                    encryptedprivatekey TEXT NOT NULL,
+                    userplatformid TEXT NOT NULL,
                     platform TEXT NOT NULL,
-                    platformUserId TEXT NOT NULL,
-                    platformUsername TEXT,
+                    platformuserid TEXT NOT NULL,
+                    platformusername TEXT,
                     settings TEXT NOT NULL,
-                    createdAt TEXT NOT NULL,
-                    lastUsed TEXT NOT NULL,
-                    isActive BOOLEAN NOT NULL DEFAULT FALSE
+                    createdat TEXT NOT NULL,
+                    lastused TEXT NOT NULL,
+                    isactive BOOLEAN NOT NULL DEFAULT FALSE
                 );
 
-                CREATE INDEX IF NOT EXISTS idx_wallets_userPlatformId ON wallets(userPlatformId);
+                CREATE INDEX IF NOT EXISTS idx_wallets_userPlatformId ON wallets(userplatformid);
                 CREATE INDEX IF NOT EXISTS idx_wallets_platform ON wallets(platform);
-                CREATE INDEX IF NOT EXISTS idx_wallets_active ON wallets(userPlatformId, isActive);
+                CREATE INDEX IF NOT EXISTS idx_wallets_active ON wallets(userplatformid, isactive);
             `);
 
             elizaLogger.info("✅ Wallet database schema initialized");
@@ -586,7 +606,7 @@ export class WalletService {
 }
 
 // Utility function to create platform user from runtime message
-export function createPlatformUser(runtime: IAgentRuntime, message: any): PlatformUser {
+export function createPlatformUser(runtime: IExtendedRuntime, message: IExtendedMemory): PlatformUser {
     // Extract platform information from message context
     const platform = message.platform || 'web';
     

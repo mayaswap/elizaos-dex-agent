@@ -1,4 +1,5 @@
 import { elizaLogger } from '@elizaos/core';
+import { cleanupManager } from '../utils/cleanupManager.js';
 
 export interface PlatformUser {
     platform: 'telegram' | 'discord' | 'web' | 'api';
@@ -400,13 +401,25 @@ Create your wallet now to get started! 🚀`;
     }
 
     /**
-     * Cleanup when shutting down
+     * Cleanup method for graceful shutdown
      */
-    public shutdown(): void {
+    private cleanup(): void {
         if (this.cleanupInterval) {
             clearInterval(this.cleanupInterval);
         }
-        elizaLogger.info("🔄 SessionService shutdown complete");
+        
+        // Clear all sessions
+        const sessionCount = this.sessions.size;
+        this.sessions.clear();
+        
+        elizaLogger.info(`🧹 SessionService cleanup complete - cleared ${sessionCount} sessions`);
+    }
+
+    /**
+     * Cleanup when shutting down
+     */
+    public shutdown(): void {
+        this.cleanup();
     }
 }
 

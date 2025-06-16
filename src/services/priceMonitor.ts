@@ -1,5 +1,7 @@
 import { GraphQLClient, gql } from 'graphql-request';
 import { EventEmitter } from 'events';
+import { logInfo, logError, logWarn } from './logger.js';
+import { cleanupManager } from '../utils/cleanupManager.js';
 
 interface PriceAlert {
     id: string;
@@ -21,6 +23,14 @@ export class PriceMonitorService extends EventEmitter {
     constructor() {
         super();
         this.subgraphClient = new GraphQLClient("https://graph.9mm.pro/subgraphs/name/pulsechain/9mm-v3-latest");
+        
+        // Register cleanup task
+        cleanupManager.registerCleanup(
+            'priceMonitor',
+            'PriceMonitor cleanup',
+            () => this.destroy(),
+            200 // Medium priority
+        );
     }
 
     /**
@@ -42,7 +52,7 @@ export class PriceMonitorService extends EventEmitter {
             this.startMonitoring();
         }
 
-        console.log(`📋 Price alert added: ${alert.token} ${alert.condition} $${alert.targetPrice}`);
+        logInfo(`📋 Price alert added: ${alert.token} ${alert.condition} $${alert.targetPrice}`);
         return id;
     }
 
@@ -73,11 +83,14 @@ export class PriceMonitorService extends EventEmitter {
     private startMonitoring(): void {
         if (this.monitoringInterval) return;
 
-        console.log('🚀 Starting price monitoring service...');
+        logInfo('🚀 Starting price monitoring service...');
         
-        this.monitoringInterval = setInterval(async () => {
-            await this.checkPrices();
-        }, this.POLL_INTERVAL);
+        this.monitoringInterval = cleanupManager.trackInterval(
+            setInterval(async () => {
+                await this.checkPrices();
+            }, this.POLL_INTERVAL),
+            'PriceMonitor polling interval'
+        );
 
         // Initial check
         this.checkPrices();
@@ -90,7 +103,7 @@ export class PriceMonitorService extends EventEmitter {
         if (this.monitoringInterval) {
             clearInterval(this.monitoringInterval);
             this.monitoringInterval = null;
-            console.log('⏹️ Price monitoring service stopped');
+            logInfo('⏹️ Price monitoring service stopped');
         }
     }
 
@@ -110,7 +123,7 @@ export class PriceMonitorService extends EventEmitter {
                 }
             }
         } catch (error) {
-            console.error('Error checking prices:', error);
+            logError(error as Error, { context: 'Error checking prices' });
             this.emit('error', error);
         }
     }
@@ -153,7 +166,7 @@ export class PriceMonitorService extends EventEmitter {
 
             return null;
         } catch (error) {
-            console.error(`Error fetching price for ${token}:`, error);
+            logError(error as Error, { context: `Error fetching price for ${token}` });
             return null;
         }
     }
@@ -176,13 +189,13 @@ export class PriceMonitorService extends EventEmitter {
             }
 
             if (triggered) {
-                console.log(`🚨 PRICE ALERT TRIGGERED: ${token} ${alert.condition} $${alert.targetPrice} (current: $${currentPrice.toFixed(6)})`);
+                logWarn(`🚨 PRICE ALERT TRIGGERED: ${token} ${alert.condition} $${alert.targetPrice} (current: $${currentPrice.toFixed(6)})`);
                 
                 // Trigger the callback
                 try {
                     alert.callback(currentPrice);
                 } catch (error) {
-                    console.error('Error executing alert callback:', error);
+                    logError(error as Error, { context: 'Error executing alert callback' });
                 }
 
                 // Emit event

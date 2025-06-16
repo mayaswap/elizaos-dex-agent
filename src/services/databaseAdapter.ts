@@ -5,29 +5,28 @@
  * that works with both PostgreSQL and SQLite adapters from ElizaOS.
  */
 
-import { elizaLogger } from '@elizaos/core';
+import { elizaLogger, IAgentRuntime } from '@elizaos/core';
+import { 
+    DatabaseRow, 
+    QueryResult, 
+    DatabaseAdapter, 
+    ElizaOSAdapter,
+    isPostgreSQLAdapter,
+    isSQLiteAdapter 
+} from '../types/database.js';
+import { IExtendedRuntime } from '../types/extended.js';
 
-// Unified query result interface
-export interface QueryResult {
-    rows: any[];
-    rowCount: number;
-}
-
-// Unified database adapter interface
-export interface UnifiedDatabaseAdapter {
-    query(sql: string, params?: any[]): Promise<QueryResult>;
-    execute(sql: string): Promise<void>;
-    close?(): Promise<void>;
-}
+// Re-export for convenience
+export { QueryResult, DatabaseRow } from '../types/database.js';
 
 /**
  * Wraps ElizaOS database adapters to provide consistent interface
  */
-export class ElizaOSDatabaseAdapter implements UnifiedDatabaseAdapter {
-    private adapter: any;
+export class ElizaOSDatabaseAdapter implements DatabaseAdapter {
+    private adapter: ElizaOSAdapter;
     private isPostgreSQL: boolean;
 
-    constructor(elizaosAdapter: any) {
+    constructor(elizaosAdapter: ElizaOSAdapter) {
         this.adapter = elizaosAdapter;
         
         // Detect adapter type
@@ -37,46 +36,43 @@ export class ElizaOSDatabaseAdapter implements UnifiedDatabaseAdapter {
     }
 
     private detectAdapterType(): boolean {
-        // PostgreSQL adapter has query method directly
-        if (typeof this.adapter.query === 'function') {
+        if (isPostgreSQLAdapter(this.adapter)) {
             return true;
         }
         
-        // SQLite adapter has db.prepare method
-        if (this.adapter.db && typeof this.adapter.db.prepare === 'function') {
+        if (isSQLiteAdapter(this.adapter)) {
             return false;
         }
         
         throw new Error('Unknown database adapter type');
     }
 
-    private convertSQLForSQLite(sql: string, params: any[] = []): { sql: string; params: any[] } {
-        if (this.isPostgreSQL) {
-            return { sql, params };
-        }
-        
-        // Convert PostgreSQL $1, $2, etc. to SQLite ?
+    /**
+     * Convert PostgreSQL parameterized queries to SQLite format
+     * PostgreSQL: $1, $2, $3...
+     * SQLite: ?, ?, ?...
+     */
+    private convertSQLForSQLite(sql: string, params: (string | number | boolean | null)[] = []): { sql: string; params: (string | number | boolean | null)[] } {
         let convertedSQL = sql;
-        let paramIndex = 1;
         
-        while (convertedSQL.includes(`$${paramIndex}`)) {
-            convertedSQL = convertedSQL.replace(`$${paramIndex}`, '?');
-            paramIndex++;
+        // Replace $1, $2, etc. with ?
+        for (let i = params.length; i >= 1; i--) {
+            convertedSQL = convertedSQL.replace(new RegExp(`\\$${i}`, 'g'), '?');
         }
         
         return { sql: convertedSQL, params };
     }
 
-    async query(sql: string, params: any[] = []): Promise<QueryResult> {
+    async query(sql: string, params: (string | number | boolean | null)[] = []): Promise<QueryResult> {
         try {
-            if (this.isPostgreSQL) {
+            if (isPostgreSQLAdapter(this.adapter)) {
                 // PostgreSQL adapter
                 const result = await this.adapter.query(sql, params);
                 return {
-                    rows: result.rows || result,
+                    rows: result.rows || [],
                     rowCount: result.rowCount || (result.rows ? result.rows.length : 0)
                 };
-            } else {
+            } else if (isSQLiteAdapter(this.adapter)) {
                 // SQLite adapter
                 const { sql: convertedSQL, params: convertedParams } = this.convertSQLForSQLite(sql, params);
                 const stmt = this.adapter.db.prepare(convertedSQL);
@@ -86,9 +82,12 @@ export class ElizaOSDatabaseAdapter implements UnifiedDatabaseAdapter {
                     rows: rows || [],
                     rowCount: rows ? rows.length : 0
                 };
+            } else {
+                throw new Error('Unknown adapter type');
             }
         } catch (error) {
-            elizaLogger.error(`Database query error: ${error.message}`);
+            const err = error as Error;
+            elizaLogger.error(`Database query error: ${err.message}`);
             elizaLogger.error(`SQL: ${sql}`);
             elizaLogger.error(`Params:`, params);
             throw error;
@@ -97,30 +96,33 @@ export class ElizaOSDatabaseAdapter implements UnifiedDatabaseAdapter {
 
     async execute(sql: string): Promise<void> {
         try {
-            if (this.isPostgreSQL) {
+            if (isPostgreSQLAdapter(this.adapter)) {
                 // PostgreSQL adapter
                 await this.adapter.query(sql);
-            } else {
+            } else if (isSQLiteAdapter(this.adapter)) {
                 // SQLite adapter
                 this.adapter.db.exec(sql);
+            } else {
+                throw new Error('Unknown adapter type');
             }
         } catch (error) {
-            elizaLogger.error(`Database execute error: ${error.message}`);
+            const err = error as Error;
+            elizaLogger.error(`Database execute error: ${err.message}`);
             elizaLogger.error(`SQL: ${sql}`);
             throw error;
         }
     }
 
-    async insert(sql: string, params: any[] = []): Promise<{ insertId?: string; changes: number }> {
+    async insert(sql: string, params: (string | number | boolean | null)[] = []): Promise<{ insertId?: string; changes: number }> {
         try {
-            if (this.isPostgreSQL) {
+            if (isPostgreSQLAdapter(this.adapter)) {
                 // PostgreSQL adapter
                 const result = await this.adapter.query(sql, params);
                 return {
                     changes: result.rowCount || 0,
-                    insertId: result.rows?.[0]?.id
+                    insertId: result.rows?.[0]?.id as string | undefined
                 };
-            } else {
+            } else if (isSQLiteAdapter(this.adapter)) {
                 // SQLite adapter
                 const { sql: convertedSQL, params: convertedParams } = this.convertSQLForSQLite(sql, params);
                 const stmt = this.adapter.db.prepare(convertedSQL);
@@ -130,15 +132,18 @@ export class ElizaOSDatabaseAdapter implements UnifiedDatabaseAdapter {
                     changes: result.changes || 0,
                     insertId: result.lastInsertRowid?.toString()
                 };
+            } else {
+                throw new Error('Unknown adapter type');
             }
         } catch (error) {
-            elizaLogger.error(`Database insert error: ${error.message}`);
+            const err = error as Error;
+            elizaLogger.error(`Database insert error: ${err.message}`);
             throw error;
         }
     }
 
     async transaction<T>(fn: () => Promise<T>): Promise<T> {
-        if (this.isPostgreSQL) {
+        if (isPostgreSQLAdapter(this.adapter)) {
             // PostgreSQL transactions
             try {
                 await this.adapter.query('BEGIN');
@@ -149,35 +154,50 @@ export class ElizaOSDatabaseAdapter implements UnifiedDatabaseAdapter {
                 await this.adapter.query('ROLLBACK');
                 throw error;
             }
-        } else {
+        } else if (isSQLiteAdapter(this.adapter)) {
             // SQLite transactions
-            const transaction = this.adapter.db.transaction(fn);
-            return transaction();
+            if (this.adapter.db.transaction) {
+                const transaction = this.adapter.db.transaction(fn);
+                return transaction();
+            } else {
+                // Fallback for SQLite without transaction support
+                return fn();
+            }
+        } else {
+            throw new Error('Unknown adapter type');
         }
     }
 
     // Helper method to get a single row
-    async queryOne(sql: string, params: any[] = []): Promise<any | null> {
+    async queryOne(sql: string, params: (string | number | boolean | null)[] = []): Promise<DatabaseRow | null> {
         const result = await this.query(sql, params);
         return result.rows[0] || null;
     }
 
     // Helper method for simple updates
-    async update(sql: string, params: any[] = []): Promise<number> {
+    async update(sql: string, params: (string | number | boolean | null)[] = []): Promise<number> {
         const result = await this.insert(sql, params);
         return result.changes;
+    }
+
+    async close(): Promise<void> {
+        // Most ElizaOS adapters don't expose close methods
+        elizaLogger.info("Database adapter close requested (no-op for ElizaOS adapters)");
     }
 }
 
 /**
- * Factory function to create the unified adapter from ElizaOS runtime
+ * Factory function to create the appropriate database adapter
  */
-export function createDatabaseAdapter(runtime: any): ElizaOSDatabaseAdapter {
-    const adapter = runtime.adapter || runtime.databaseAdapter;
+export function createDatabaseAdapter(runtime: IAgentRuntime): ElizaOSDatabaseAdapter {
+    const adapter = (runtime as any).databaseAdapter || (runtime as any).adapter;
     
     if (!adapter) {
         throw new Error('No database adapter found in runtime');
     }
-    
-    return new ElizaOSDatabaseAdapter(adapter);
-} 
+
+    return new ElizaOSDatabaseAdapter(adapter as ElizaOSAdapter);
+}
+
+// Export the factory function as default as well
+export default createDatabaseAdapter;

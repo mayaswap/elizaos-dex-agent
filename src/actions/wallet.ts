@@ -9,6 +9,7 @@ import type {
 } from '@elizaos/core';
 import { parseCommand } from '../utils/smartParser.js';
 import { WalletService, createPlatformUser } from '../services/walletService.js';
+import { IExtendedRuntime } from '../types/extended.js';
 
 const walletAction: Action = {
     name: "WALLET_LEGACY",
@@ -51,8 +52,8 @@ const walletAction: Action = {
                 const lowerText = userMessage.toLowerCase();
                 
                 // Create platform user and check for existing wallets
-                const platformUser = createPlatformUser(runtime as any, message);
-                const walletService = new WalletService(runtime as any);
+                const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
+                const walletService = new WalletService(runtime as IExtendedRuntime);
                 
                 let existingWallet: any = null;
                 try {

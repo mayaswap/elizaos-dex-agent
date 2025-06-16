@@ -1,5 +1,6 @@
 import { NineMMAggregator } from '../utils/aggregator.js';
 import { POPULAR_TOKENS } from '../config/chains.js';
+import { logError } from './logger.js';
 
 interface PriceData {
     price: string;
@@ -77,7 +78,7 @@ export class PriceService {
                 }
             };
         } catch (error) {
-            console.error('Price fetch error:', error);
+            logError(error as Error, { context: 'Price fetch error' });
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to fetch price data'

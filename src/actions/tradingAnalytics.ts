@@ -9,6 +9,7 @@ import {
 import { parseCommand } from "../utils/smartParser.js";
 import { createPlatformUser } from "../services/walletService.js";
 import { DatabaseService } from "../services/databaseService.js";
+import { IExtendedRuntime } from "../types/extended.js";
 
 const tradingAnalyticsAction: Action = {
     name: "TRADING_ANALYTICS",
@@ -40,8 +41,8 @@ const tradingAnalyticsAction: Action = {
     ) => {
         try {
             const text = message.content.text.toLowerCase();
-            const platformUser = createPlatformUser(runtime as any, message);
-            const dbService = new DatabaseService(runtime as any);
+            const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
+            const dbService = new DatabaseService(runtime as IExtendedRuntime);
             await dbService.initializeDatabase();
             
             let responseText = '';

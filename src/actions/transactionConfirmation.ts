@@ -12,6 +12,7 @@ import { createPlatformUser } from "../services/walletService.js";
 import { NineMMAggregator } from "../utils/aggregator.js";
 import { WalletService } from "../services/walletService.js";
 import { fuzzyMatcher } from "../utils/fuzzyMatching.js";
+import { IExtendedRuntime } from "../types/extended.js";
 
 const transactionConfirmationAction: Action = {
     name: "TRANSACTION_CONFIRMATION",
@@ -30,7 +31,7 @@ const transactionConfirmationAction: Action = {
         
         // Only validate if user has pending transactions and this looks like a confirmation
         if (confirmationMatch.isConfirmation || confirmationMatch.isAmbiguous) {
-            const platformUser = createPlatformUser(runtime as any, message);
+            const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
             if (platformUser) {
                 const pendingTx = sessionService.getPendingTransactions(platformUser);
                 return pendingTx.length > 0;
@@ -48,7 +49,7 @@ const transactionConfirmationAction: Action = {
         callback?: HandlerCallback
     ): Promise<boolean> => {
         const text = message.content.text.toLowerCase();
-        const platformUser = createPlatformUser(runtime as any, message);
+        const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
         
         if (!platformUser) {
             if (callback) {
@@ -218,7 +219,7 @@ This may take 30-60 seconds depending on network conditions.`
                 }
 
                 // Initialize wallet service
-                const walletService = new WalletService(runtime as any);
+                const walletService = new WalletService(runtime as IExtendedRuntime);
                 
                 // Get user's active wallet
                 const activeWallet = await walletService.getActiveWallet(platformUser);
@@ -235,24 +236,46 @@ This may take 30-60 seconds depending on network conditions.`
                 // Execute swap using the aggregator
                 const aggregator = new NineMMAggregator(369);
                 
-                // Here you would execute the actual swap
-                // For now, this is a placeholder showing the flow
-                console.log('Executing swap with:', {
-                    quote: confirmedTx.quote,
-                    walletAddress: activeWallet.address,
-                    privateKey: privateKey.slice(0, 10) + '...' // Log partial key for debugging
+                // Execute real transaction using ethers.js
+                const { ethers } = await import('ethers');
+                
+                // Create provider for PulseChain
+                const provider = new ethers.JsonRpcProvider('https://rpc.pulsechain.com');
+                
+                // Create wallet instance from private key
+                const wallet = new ethers.Wallet(privateKey, provider);
+                
+                console.log('Executing real swap transaction:', {
+                    from: activeWallet.address,
+                    to: confirmedTx.quote.to,
+                    data: confirmedTx.quote.data,
+                    value: confirmedTx.quote.value
                 });
+                
+                // Execute the actual transaction
+                const txRequest = {
+                    to: confirmedTx.quote.to,
+                    data: confirmedTx.quote.data,
+                    value: confirmedTx.quote.value,
+                    gasLimit: confirmedTx.quote.gas || '500000' // Use quote gas or fallback
+                };
+                
+                const txResponse = await wallet.sendTransaction(txRequest);
+                const txHash = txResponse.hash;
 
-                // Simulate successful transaction
-                const mockTxHash = "0x" + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-
+                // Wait for transaction confirmation
+                console.log(`⏳ Waiting for transaction confirmation: ${txHash}`);
+                const receipt = await txResponse.wait();
+                
                 if (callback) {
                     callback({
                         text: `✅ **Transaction Successful!**
 
 **Completed Trade:**
 • **Amount:** ${confirmedTx.amount} ${confirmedTx.fromToken} → ${confirmedTx.toToken}
-• **Transaction Hash:** \`${mockTxHash}\`
+• **Transaction Hash:** \`${txHash}\`
+• **Block Number:** ${receipt.blockNumber}
+• **Gas Used:** ${receipt.gasUsed}
 • **Status:** Confirmed on PulseChain
 
 **Next Steps:**

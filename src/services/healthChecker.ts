@@ -1,3 +1,5 @@
+import { logInfo, logError, logWarn } from './logger.js';
+
 export interface SystemHealth {
     overall: 'healthy' | 'degraded' | 'critical';
     timestamp: Date;
@@ -123,7 +125,7 @@ export class HealthChecker {
         this.alerts = new SimpleAlertManager();
         this.initializeHealthChecks();
         this.scheduleHealthChecks();
-        console.log('HealthChecker initialized with proactive monitoring');
+        logInfo('HealthChecker initialized with proactive monitoring');
     }
 
     /**
@@ -167,7 +169,7 @@ export class HealthChecker {
             return systemHealth;
 
         } catch (error) {
-            console.error('HealthChecker: Error running health checks:', error);
+            logError(error as Error, { context: 'HealthChecker: Error running health checks' });
             return this.getCriticalHealthStatus(error);
         }
     }
@@ -203,7 +205,7 @@ export class HealthChecker {
             };
 
         } catch (error) {
-            console.error('HealthChecker: Database check failed:', error);
+            logError(error as Error, { context: 'HealthChecker: Database check failed' });
             return {
                 status: 'critical',
                 responseTime: Date.now() - startTime,
@@ -426,11 +428,11 @@ export class HealthChecker {
             try {
                 await this.runHealthChecks();
             } catch (error) {
-                console.error('HealthChecker: Scheduled health check failed:', error);
+                logError(error as Error, { context: 'HealthChecker: Scheduled health check failed' });
             }
         }, 30000);
 
-        console.log('HealthChecker: Scheduled health checks every 30 seconds');
+        logInfo('HealthChecker: Scheduled health checks every 30 seconds');
     }
 
     /**
@@ -452,7 +454,7 @@ export class HealthChecker {
                 });
             }
         } catch (error) {
-            console.error('HealthChecker: Failed to send health alerts:', error);
+            logError(error as Error, { context: 'HealthChecker: Failed to send health alerts' });
         }
     }
 
@@ -478,7 +480,7 @@ export class HealthChecker {
             clearInterval(this.checkInterval);
             this.checkInterval = null;
         }
-        console.log('HealthChecker: Stopped health checking');
+        logInfo('HealthChecker: Stopped health checking');
     }
 
     // Private helper methods
@@ -618,8 +620,14 @@ class SimpleAlertManager implements AlertManager {
 
         this.alertHistory.push(alert);
         
-        // Log alert to console (in production, this would send to external systems)
-        console.log(`🚨 [${level.toUpperCase()}] ${message}`, details);
+        // Log alert (in production, this would send to external systems)
+        if (level === 'critical') {
+            logError(new Error(message), { level, details });
+        } else if (level === 'warning') {
+            logWarn(message, { level, details });
+        } else {
+            logInfo(`🚨 [${level.toUpperCase()}] ${message}`, { details });
+        }
     }
 
     shouldAlert(currentHealth: SystemHealth, previousHealth?: SystemHealth): boolean {

@@ -10,6 +10,7 @@ import {
 import { parseCommand } from "../utils/smartParser.js";
 import { WalletService, createPlatformUser } from "../services/walletService.js";
 import { DatabaseService } from "../services/databaseService.js";
+import { IExtendedRuntime } from "../types/extended.js";
 
 const transactionHistoryAction: Action = {
     name: "TRANSACTION_HISTORY",
@@ -39,8 +40,8 @@ const transactionHistoryAction: Action = {
     ): Promise<boolean> => {
         try {
             const text = message.content?.text?.toLowerCase() || '';
-            const platformUser = createPlatformUser(runtime as any, message);
-            const walletService = new WalletService(runtime as any);
+            const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
+            const walletService = new WalletService(runtime as IExtendedRuntime);
             const userWallets = await walletService.getUserWallets(platformUser);
             const walletCount = userWallets.length;
 
@@ -84,7 +85,7 @@ To view your transaction history, you need to connect a wallet first.
             else if (text.includes('failed') || text.includes('error')) transactionType = 'failed';
 
             // Fetch real transaction history from database
-            const dbService = new DatabaseService(runtime as any);
+            const dbService = new DatabaseService(runtime as IExtendedRuntime);
             await dbService.initializeDatabase();
             
             const userId = `${platformUser.platform}:${platformUser.platformUserId}`;

@@ -55,6 +55,8 @@ const addLiquidityAction: Action = {
         
         const parsed = await parseCommand(text);
         
+        console.log(`🔍 Parsed tokens: fromToken="${parsed.fromToken}", toToken="${parsed.toToken}"`);
+        
         if (!parsed.fromToken || !parsed.toToken) {
             if (callback) {
                 callback({
@@ -68,13 +70,21 @@ const addLiquidityAction: Action = {
             const poolDiscovery = new NineMmPoolDiscoveryService();
             const positionManager = new NineMmV3PositionManager();
             
-            // Get token addresses
+            // Get token addresses with PLS→WPLS conversion
             const pulsechainTokens = POPULAR_TOKENS.pulsechain;
-            const token0Address = pulsechainTokens[parsed.fromToken as keyof typeof pulsechainTokens];
-            const token1Address = pulsechainTokens[parsed.toToken as keyof typeof pulsechainTokens];
+            
+            // Convert PLS to WPLS for pool discovery (pools use WPLS, not native PLS)
+            const normalizeToken = (token: string) => token.toUpperCase() === 'PLS' ? 'WPLS' : token.toUpperCase();
+            const normalizedFromToken = normalizeToken(parsed.fromToken);
+            const normalizedToToken = normalizeToken(parsed.toToken);
+            
+            console.log(`🔍 Normalized tokens: ${normalizedFromToken}/${normalizedToToken}`);
+            
+            const token0Address = pulsechainTokens[normalizedFromToken as keyof typeof pulsechainTokens];
+            const token1Address = pulsechainTokens[normalizedToToken as keyof typeof pulsechainTokens];
             
             if (!token0Address || !token1Address) {
-                throw new Error(`Token not found: ${parsed.fromToken} or ${parsed.toToken}`);
+                throw new Error(`Token not found: ${normalizedFromToken} or ${normalizedToToken}`);
             }
 
             // Find available pools
@@ -83,10 +93,10 @@ const addLiquidityAction: Action = {
                 sortDirection: 'desc'
             });
             
-            // Filter pools for this token pair
+            // Filter pools for this token pair using normalized token names
             const filteredPools = pools.filter(pool => 
-                (pool.token0.symbol === parsed.fromToken && pool.token1.symbol === parsed.toToken) ||
-                (pool.token0.symbol === parsed.toToken && pool.token1.symbol === parsed.fromToken)
+                (pool.token0.symbol === normalizedFromToken && pool.token1.symbol === normalizedToToken) ||
+                (pool.token0.symbol === normalizedToToken && pool.token1.symbol === normalizedFromToken)
             );
             
             // Find the first valid pool for this token pair
@@ -95,7 +105,7 @@ const addLiquidityAction: Action = {
             if (!selectedPool) {
                 if (callback) {
                     callback({
-                        text: `❌ No liquidity pools found for ${parsed.fromToken}/${parsed.toToken} pair.
+                        text: `❌ No liquidity pools found for ${normalizedFromToken}/${normalizedToToken} pair.
 
 💡 **Suggested Actions:**
 • Check if both tokens exist on 9mm DEX

@@ -236,8 +236,10 @@ export class NineMMAggregator {
         throw new Error('Invalid amount');
       }
       
-      // Convert to wei by multiplying by 10^decimals
-      const wei = Math.floor(amountFloat * Math.pow(10, decimals));
+      // Use BigInt to avoid scientific notation for large numbers
+      const amountBigInt = BigInt(Math.floor(amountFloat));
+      const multiplier = BigInt(10) ** BigInt(decimals);
+      const wei = amountBigInt * multiplier;
       return wei.toString();
     } catch (error) {
       throw new Error(`Failed to format amount: ${error instanceof Error ? error.message : 'Unknown error'}`);

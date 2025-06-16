@@ -10,6 +10,7 @@ import {
 import { parseCommand } from "../utils/smartParser.js";
 import { NineMmV3PositionManager } from "../utils/9mm-v3-position-manager.js";
 import { WalletService, createPlatformUser } from "../services/walletService.js";
+import { IExtendedRuntime } from "../types/extended.js";
 
 const portfolioAction: Action = {
     name: "PORTFOLIO_OVERVIEW",
@@ -39,8 +40,8 @@ const portfolioAction: Action = {
             const positionManager = new NineMmV3PositionManager();
             
             // Create platform user and get wallets using new system
-            const platformUser = createPlatformUser(runtime as any, message);
-            const walletService = new WalletService(runtime as any);
+            const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
+            const walletService = new WalletService(runtime as IExtendedRuntime);
             
             // Get user wallets
             const userWallets = await walletService.getUserWallets(platformUser);

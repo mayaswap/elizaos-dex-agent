@@ -9,6 +9,7 @@ import {
 } from "@elizaos/core";
 import { parseCommand } from "../utils/smartParser.js";
 import { WalletService, createPlatformUser } from "../services/walletService.js";
+import { IExtendedRuntime } from "../types/extended.js";
 
 const multiChainAction: Action = {
     name: "MULTI_CHAIN_SUPPORT",
@@ -81,8 +82,8 @@ const multiChainAction: Action = {
 
             // Check for balance inquiry across chains
             if (text.includes('balance') && !targetChain) {
-                const platformUser = createPlatformUser(runtime as any, message);
-                const walletService = new WalletService(runtime as any);
+                const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
+                const walletService = new WalletService(runtime as IExtendedRuntime);
                 const userWallets = await walletService.getUserWallets(platformUser);
                 const walletCount = userWallets.length;
 

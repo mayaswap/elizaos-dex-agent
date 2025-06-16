@@ -10,6 +10,7 @@ import { parseCommand } from "../utils/smartParser.js";
 import { sessionService } from "../services/sessionService.js";
 import { createPlatformUser } from "../services/walletService.js";
 import { fuzzyMatcher } from "../utils/fuzzyMatching.js";
+import { IExtendedRuntime } from "../types/extended.js";
 
 const contextualResponseAction: Action = {
     name: "CONTEXTUAL_RESPONSE",
@@ -20,7 +21,7 @@ const contextualResponseAction: Action = {
     ],
     validate: async (runtime: IAgentRuntime, message: Memory) => {
         const text = message.content.text;
-        const platformUser = createPlatformUser(runtime as any, message);
+        const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
         
         if (!platformUser) return false;
         
@@ -47,7 +48,7 @@ const contextualResponseAction: Action = {
         callback?: HandlerCallback
     ): Promise<boolean> => {
         const text = message.content.text;
-        const platformUser = createPlatformUser(runtime as any, message);
+        const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
         
         if (!platformUser) {
             if (callback) {

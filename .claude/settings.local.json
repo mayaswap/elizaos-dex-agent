@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm start)",
+      "Bash(node:*)",
+      "Bash(timeout 5s npm start)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "Bash(nc:*)",
+      "Bash(pkill:*)",
+      "Bash(psql:*)",
+      "WebFetch(domain:api.9mm.pro)",
+      "WebFetch(domain:kekxplorer.avecdra.pro)"
+    ],
+    "deny": []
+  }
+}

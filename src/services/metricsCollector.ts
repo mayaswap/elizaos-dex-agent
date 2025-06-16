@@ -1,3 +1,5 @@
+import { logInfo, logError } from './logger.js';
+
 export interface MetricEvent {
     type: 'user_action' | 'system_event' | 'error' | 'performance';
     category: string;
@@ -162,7 +164,7 @@ export class MetricsCollector {
             this.updateAggregations(key, entry);
             
         } catch (error) {
-            console.error('MetricsCollector: Error tracking event:', error);
+            logError(error as Error, { context: 'MetricsCollector: Error tracking event' });
         }
     }
 
@@ -311,7 +313,7 @@ export class MetricsCollector {
             };
             
         } catch (error) {
-            console.error('MetricsCollector: Error getting realtime stats:', error);
+            logError(error as Error, { context: 'MetricsCollector: Error getting realtime stats' });
             return this.getEmptyRealtimeStats();
         }
     }
@@ -417,7 +419,7 @@ export class MetricsCollector {
             };
             
         } catch (error) {
-            console.error('MetricsCollector: Error getting user insights:', error);
+            logError(error as Error, { context: 'MetricsCollector: Error getting user insights' });
             return this.getEmptyUserInsights();
         }
     }
@@ -473,7 +475,7 @@ export class MetricsCollector {
             };
             
         } catch (error) {
-            console.error('MetricsCollector: Error getting system performance:', error);
+            logError(error as Error, { context: 'MetricsCollector: Error getting system performance' });
             return this.getEmptyPerformanceMetrics();
         }
     }

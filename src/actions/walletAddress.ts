@@ -8,6 +8,7 @@ import type {
 } from '@elizaos/core';
 import { parseCommand } from '../utils/smartParser.js';
 import { WalletService, createPlatformUser } from '../services/walletService.js';
+import { IExtendedRuntime } from '../types/extended.js';
 
 const walletAddressAction: Action = {
     name: "SHOW_WALLET_ADDRESS",
@@ -51,10 +52,10 @@ const walletAddressAction: Action = {
     ) => {
         try {
             // Create platform user from message context
-            const platformUser = createPlatformUser(runtime as any, message);
+            const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
             
             // Initialize wallet service
-            const walletService = new WalletService(runtime as any);
+            const walletService = new WalletService(runtime as IExtendedRuntime);
             
             let responseText = "";
             

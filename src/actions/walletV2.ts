@@ -10,6 +10,7 @@ import type {
 import { parseCommand } from '../utils/smartParser.js';
 import { WalletService, createPlatformUser, PlatformUser } from '../services/walletService.js';
 import { sessionService } from '../services/sessionService.js';
+import { IExtendedRuntime } from '../types/extended.js';
 
 const walletV2Action: Action = {
     name: "WALLET_V2",
@@ -68,18 +69,18 @@ const walletV2Action: Action = {
             
             // Get the shared wallet service from runtime
             let walletService: WalletService;
-            if ((runtime as any).customServices?.wallet) {
-                walletService = (runtime as any).customServices.wallet;
+            if ((runtime as IExtendedRuntime).customServices?.wallet) {
+                walletService = (runtime as IExtendedRuntime).customServices.wallet;
                 console.log('✅ Using shared WalletService from runtime');
             } else {
                 // Fallback: create new instance if not available
                 console.warn("⚠️ Shared wallet service not available, creating new WalletService instance");
-                walletService = new WalletService(runtime as any);
+                walletService = new WalletService(runtime as IExtendedRuntime);
                 await walletService.initializeDatabase();
             }
             
             // Create platform user from message
-            const platformUser = createPlatformUser(runtime as any, message);
+            const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
             
             let responseText = "";
 

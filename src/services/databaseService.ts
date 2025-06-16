@@ -1,11 +1,5 @@
-import { elizaLogger } from '@elizaos/core';
+import { elizaLogger, IAgentRuntime } from '@elizaos/core';
 import { ElizaOSDatabaseAdapter, createDatabaseAdapter } from './databaseAdapter.js';
-
-// Interface for ElizaOS runtime
-interface IAgentRuntime {
-    adapter?: any;
-    databaseAdapter?: any;
-}
 
 export interface TradingHistoryRecord {
     id: string;
@@ -365,8 +359,23 @@ export class DatabaseService {
         `, [userPlatformId, limit]);
 
         return result.rows.map(trade => ({
-            ...trade,
-            success: Boolean(trade.success)
+            id: trade.id as string,
+            userPlatformId: trade.userPlatformId as string,
+            walletId: trade.walletId as string,
+            transactionHash: trade.transactionHash as string | undefined,
+            fromToken: trade.fromToken as string,
+            toToken: trade.toToken as string,
+            amountIn: trade.amountIn as string,
+            amountOut: trade.amountOut as string,
+            priceImpact: trade.priceImpact as number | undefined,
+            slippageUsed: trade.slippageUsed as number | undefined,
+            gasUsed: trade.gasUsed as string | undefined,
+            gasCost: trade.gasCost as string | undefined,
+            success: Boolean(trade.success),
+            timestamp: trade.timestamp as string,
+            platform: trade.platform as string,
+            dexUsed: trade.dexUsed as string | undefined,
+            notes: trade.notes as string | undefined
         }));
     }
 
@@ -398,9 +407,16 @@ export class DatabaseService {
         const result = await this.db.query(query, params);
 
         return result.rows.map(alert => ({
-            ...alert,
+            id: alert.id as string,
+            userPlatformId: alert.userPlatformId as string,
+            tokenSymbol: alert.tokenSymbol as string,
+            targetPrice: alert.targetPrice as number,
             isAbove: Boolean(alert.isAbove),
-            isActive: Boolean(alert.isActive)
+            isActive: Boolean(alert.isActive),
+            triggeredAt: alert.triggeredAt as string | undefined,
+            createdAt: alert.createdAt as string,
+            platform: alert.platform as string,
+            alertMessage: alert.alertMessage as string | undefined
         }));
     }
 
@@ -455,16 +471,26 @@ export class DatabaseService {
         return result.rows.map(w => {
             try {
                 return {
-                    ...w,
-                    tokenSymbols: JSON.parse(w.tokenSymbols),
+                    id: w.id as string,
+                    userPlatformId: w.userPlatformId as string,
+                    name: w.name as string,
+                    tokenSymbols: JSON.parse(w.tokenSymbols as string),
+                    description: w.description as string | undefined,
+                    createdAt: w.createdAt as string,
+                    platform: w.platform as string,
                     isDefault: Boolean(w.isDefault)
                 };
             } catch (error) {
                 elizaLogger.error(`Failed to parse watchlist tokens for watchlist ${w.id}:`, error);
                 // Return with empty token list as fallback
                 return {
-                    ...w,
+                    id: w.id as string,
+                    userPlatformId: w.userPlatformId as string,
+                    name: w.name as string,
                     tokenSymbols: [],
+                    description: w.description as string | undefined,
+                    createdAt: w.createdAt as string,
+                    platform: w.platform as string,
                     isDefault: Boolean(w.isDefault)
                 };
             }
@@ -508,7 +534,7 @@ export class DatabaseService {
 
         return {
             ...result,
-            variations: JSON.parse(result.variations),
+            variations: JSON.parse(result.variations as string),
             isActive: Boolean(result.isActive)
         };
     }
@@ -522,7 +548,7 @@ export class DatabaseService {
 
         return result.rows.map(token => ({
             ...token,
-            variations: JSON.parse(token.variations),
+            variations: JSON.parse(token.variations as string),
             isActive: Boolean(token.isActive)
         }));
     }
@@ -548,7 +574,7 @@ export class DatabaseService {
 
         return result.rows.map(token => ({
             ...token,
-            variations: JSON.parse(token.variations),
+            variations: JSON.parse(token.variations as string),
             isActive: Boolean(token.isActive)
         }));
     }

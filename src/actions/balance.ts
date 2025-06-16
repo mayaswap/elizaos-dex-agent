@@ -10,6 +10,7 @@ import type {
 import { parseCommand } from '../utils/smartParser.js';
 import { POPULAR_TOKENS, CHAIN_CONFIGS } from '../config/chains.js';
 import { WalletService, createPlatformUser } from '../services/walletService.js';
+import { IExtendedRuntime } from '../types/extended.js';
 
 const balanceAction: Action = {
     name: "CHECK_BALANCE",
@@ -60,10 +61,10 @@ const balanceAction: Action = {
             const parsed = await parseCommand(userMessage);
             
             // Get user's platform info
-            const platformUser = createPlatformUser(runtime as any, message);
+            const platformUser = createPlatformUser(runtime as IExtendedRuntime, message);
             
             // Get wallet service
-            const walletService = new WalletService(runtime as any);
+            const walletService = new WalletService(runtime as IExtendedRuntime);
             const userWallets = await walletService.getUserWallets(platformUser);
             
             if (userWallets.length === 0) {
