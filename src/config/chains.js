@@ -11,7 +11,7 @@ exports.CHAIN_CONFIGS = {
         name: 'PulseChain',
         symbol: 'PLS',
         rpcUrl: 'https://rpc.pulsechain.com',
-        explorerUrl: 'https://scan.pulsechain.com',
+        explorerUrl: 'https://kekxplorer.avecdra.pro',
         wrappedToken: '0xA1077a294dDE1B09bB078844df40758a5D0f9a27', // WPLS
         aggregatorBaseUrl: 'https://api.9mm.pro',
     },

@@ -11,6 +11,7 @@ import { parseCommand } from "../utils/smartParser.js";
 import { WalletService, createPlatformUser } from "../services/walletService.js";
 import { DatabaseService } from "../services/databaseService.js";
 import { IExtendedRuntime } from "../types/extended.js";
+import { CHAIN_CONFIGS } from "../config/chains.js";
 
 const transactionHistoryAction: Action = {
     name: "TRANSACTION_HISTORY",
@@ -174,17 +175,20 @@ ${filteredTransactions.slice(0, 5).map((tx, i) => {
                    timeAgo < 24 ? `${timeAgo}h ago` :
                    `${Math.floor(timeAgo/24)}d ago`;
     
+    // Create explorer link for transaction hash
+    const explorerUrl = `${CHAIN_CONFIGS.pulsechain.explorerUrl}/tx/${tx.hash}`;
+    
     if (tx.type === 'swap') {
         return `${i + 1}. **${tx.type.toUpperCase()}** (${timeStr})
    ${tx.fromAmount} ${tx.fromToken} → ${parseFloat(tx.toAmount).toLocaleString()} ${tx.toToken}
    Value: $${tx.usdValue.toLocaleString()} | Gas: ${tx.gasCost} PLS | Slippage: ${tx.slippage}
-   Hash: \`${tx.hash}\``;
+   Hash: [${tx.hash}](${explorerUrl})`;
     } else {
         const action = tx.type === 'add_liquidity' ? 'Added to' : 'Removed from';
         return `${i + 1}. **${tx.type.replace('_', ' ').toUpperCase()}** (${timeStr})
    ${action} ${tx.pool} pool
    Position: ${tx.positionId} | Value: $${tx.usdValue.toLocaleString()}
-   Hash: \`${tx.hash}\``;
+   Hash: [${tx.hash}](${explorerUrl})`;
     }
 }).join('\n\n')}
 

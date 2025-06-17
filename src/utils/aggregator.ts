@@ -30,9 +30,18 @@ export class NineMMAggregator {
         sellAmount: request.amount,
         slippagePercentage: request.slippagePercentage.toString(),
         takerAddress: request.userAddress,
+        // Let 9X API determine its own gas price - it knows PulseChain best
       });
 
       const url = `${this.baseUrl}/swap/v1/quote?${params.toString()}`;
+      
+      console.log('🌐 Making 9X API request (API determines gas price):', {
+        sellToken: request.fromToken,
+        buyToken: request.toToken,
+        sellAmount: request.amount,
+        takerAddress: request.userAddress,
+        slippagePercentage: request.slippagePercentage
+      });
       
       const response = await fetch(url, {
         method: 'GET',
@@ -47,7 +56,36 @@ export class NineMMAggregator {
 
       const quoteData = await response.json();
       
-      return this.transformQuoteResponse(quoteData);
+      console.log('🌐 Raw 9X API response:', {
+        to: quoteData.to,
+        data: quoteData.data ? `${quoteData.data.substring(0, 20)}...` : 'NO DATA',
+        dataLength: quoteData.data ? quoteData.data.length : 0,
+        value: quoteData.value,
+        gas: quoteData.gas,
+        gasPrice: quoteData.gasPrice,
+        gasPriceGwei: quoteData.gasPrice ? `${parseInt(quoteData.gasPrice)} Gwei (from 9X API)` : 'N/A',
+        buyAmount: quoteData.buyAmount,
+        sellAmount: quoteData.sellAmount,
+        price: quoteData.price,
+        dataType: typeof quoteData.data,
+        fullDataExists: !!quoteData.data,
+        dataIsString: typeof quoteData.data === 'string',
+        dataStartsWithOx: quoteData.data?.startsWith?.('0x')
+      });
+      
+      const transformedQuote = this.transformQuoteResponse(quoteData);
+      
+      console.log('🔄 Transformed quote:', {
+        to: transformedQuote.to,
+        data: transformedQuote.data ? `${transformedQuote.data.substring(0, 20)}...` : 'NO DATA',
+        dataLength: transformedQuote.data ? transformedQuote.data.length : 0,
+        dataExists: !!transformedQuote.data,
+        dataType: typeof transformedQuote.data,
+        gasPrice: transformedQuote.gasPrice,
+        gasPriceGwei: transformedQuote.gasPrice ? `${transformedQuote.gasPrice} Gwei` : 'N/A'
+      });
+      
+      return transformedQuote;
       
     } catch (error) {
       throw new Error(
@@ -180,6 +218,13 @@ export class NineMMAggregator {
    * Transform 9mm API response to our SwapQuote schema
    */
   private transformQuoteResponse(data: any): SwapQuote {
+    console.log('🔧 Transform input data field:', {
+      inputData: data.data,
+      inputDataType: typeof data.data,
+      inputDataLength: data.data?.length || 0,
+      inputDataExists: !!data.data
+    });
+    
     // Handle BigInt values from API by converting to string
     const safeStringify = (value: any): string => {
       if (typeof value === 'bigint') {
@@ -205,7 +250,7 @@ export class NineMMAggregator {
       });
     }
 
-    return {
+    const result = {
       sellToken: data.sellToken || '',
       buyToken: data.buyToken || '',
       sellAmount: safeStringify(data.sellAmount),
@@ -220,10 +265,19 @@ export class NineMMAggregator {
       sellTokenAddress: data.sellTokenAddress || data.sellToken || '',
       value: safeStringify(data.value),
       to: data.to || '',
-      data: data.data || '',
+      data: data.data || '', // CRITICAL: Direct assignment of data field
       estimatedPriceImpact: data.estimatedPriceImpact,
       sources: sources,
     };
+    
+    console.log('🔧 Transform output data field:', {
+      outputDataExists: !!result.data,
+      outputDataType: typeof result.data,
+      outputDataLength: result.data?.length || 0,
+      outputData: result.data ? `${result.data.substring(0, 20)}...` : 'NO DATA'
+    });
+    
+    return result;
   }
 
   /**
@@ -236,10 +290,9 @@ export class NineMMAggregator {
         throw new Error('Invalid amount');
       }
       
-      // Use BigInt to avoid scientific notation for large numbers
-      const amountBigInt = BigInt(Math.floor(amountFloat));
-      const multiplier = BigInt(10) ** BigInt(decimals);
-      const wei = amountBigInt * multiplier;
+      // Handle decimal amounts properly by multiplying first, then converting to BigInt
+      const scaledAmount = amountFloat * Math.pow(10, decimals);
+      const wei = BigInt(Math.floor(scaledAmount));
       return wei.toString();
     } catch (error) {
       throw new Error(`Failed to format amount: ${error instanceof Error ? error.message : 'Unknown error'}`);

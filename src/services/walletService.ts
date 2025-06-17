@@ -508,7 +508,7 @@ export class WalletService {
         name?: string
     ): Promise<MultiPlatformWallet> {
         try {
-            const wallet = ethers.Wallet.fromPhrase(mnemonic);
+            const wallet = ethers.Wallet.fromMnemonic(mnemonic);
             return await this.createWallet(platformUser, name, wallet.privateKey);
         } catch (error) {
             throw new Error("Invalid mnemonic phrase");

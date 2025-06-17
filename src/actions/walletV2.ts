@@ -93,8 +93,8 @@ const walletV2Action: Action = {
                 try {
                     const newWallet = await walletService.createWallet(platformUser, walletName);
                     
-                    // ✅ UPDATE SESSION SERVICE
-                    sessionService.updateWalletStatus(platformUser, true, newWallet.id);
+                    // Update session with new wallet status
+                    await sessionService.updateWalletStatus(platformUser, true, newWallet.id);
                     
                     responseText = `🎉 **New Wallet Created Successfully!**
 
@@ -256,8 +256,8 @@ ${wallets.map((w, i) => `${i + 1}. ${w.name}`).join('\n')}
                         const success = await walletService.switchWallet(platformUser, targetWallet.id);
                         
                         if (success) {
-                            // ✅ UPDATE SESSION SERVICE
-                            sessionService.updateWalletStatus(platformUser, true, targetWallet.id);
+                            // Update session with the switched wallet
+                            await sessionService.updateWalletStatus(platformUser, true, targetWallet.id);
                             responseText = `✅ **Wallet Switched Successfully**
 
 **New Active Wallet:** ${targetWallet.name}

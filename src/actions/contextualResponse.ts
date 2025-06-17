@@ -26,7 +26,7 @@ const contextualResponseAction: Action = {
         if (!platformUser) return false;
         
         // Only validate if user has pending transactions AND asks a non-confirmation question
-        const pendingTx = sessionService.getPendingTransactions(platformUser);
+        const pendingTx = await sessionService.getPendingTransactions(platformUser);
         if (pendingTx.length === 0) return false;
         
         // Check if this is NOT a confirmation response
@@ -60,7 +60,7 @@ const contextualResponseAction: Action = {
         }
 
         // Get the pending transaction
-        const pendingTransaction = sessionService.getMostRecentPendingTransaction(platformUser);
+        const pendingTransaction = await sessionService.getMostRecentPendingTransaction(platformUser);
         
         if (!pendingTransaction) {
             return false; // No pending transaction, let other actions handle

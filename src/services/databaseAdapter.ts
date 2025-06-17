@@ -17,7 +17,7 @@ import {
 import { IExtendedRuntime } from '../types/extended.js';
 
 // Re-export for convenience
-export { QueryResult, DatabaseRow } from '../types/database.js';
+export type { QueryResult, DatabaseRow } from '../types/database.js';
 
 /**
  * Wraps ElizaOS database adapters to provide consistent interface

@@ -9,6 +9,7 @@ import {
 } from "@elizaos/core";
 import { parseCommand } from "../utils/smartParser.js";
 import { WalletService, createPlatformUser } from "../services/walletService.js";
+import { sessionService } from "../services/sessionService.js";
 import { IExtendedRuntime } from "../types/extended.js";
 
 const slippageManagementAction: Action = {
@@ -127,8 +128,12 @@ Try: "Set slippage to 1%" or "Use 0.3% slippage"`
                     advice = 'Only for emergency situations. Very high MEV risk and potential for sandwich attacks.';
                 }
 
-                // Save the updated slippage setting
+                // 🔄 CRITICAL: Save slippage to BOTH wallet settings (persistence) AND session settings (immediate use)
+                // Save to wallet for persistence across sessions
                 await walletService.updateWalletSettings(platformUser, activeWallet.id, { slippagePercentage: requestedSlippage });
+                
+                // Also update session settings for immediate use
+                await sessionService.updateSettings(platformUser, { slippagePercentage: requestedSlippage });
 
                 const responseText = `⚙️ **Slippage Updated - ${requestedSlippage}%**
 
@@ -168,10 +173,11 @@ For a $1,000 trade, you might receive ${(1000 * (1 - requestedSlippage/100)).toF
                 if (enable || disable) {
                     const newStatus = enable;
                     
-                    // Save MEV protection setting
+                    // 🔄 Save MEV protection to BOTH wallet and session
                     await walletService.updateWalletSettings(platformUser, activeWallet.id, { 
                         mevProtection: newStatus
                     });
+                    await sessionService.updateSettings(platformUser, { mevProtection: newStatus });
                     
                     const responseText = `🛡️ **MEV Protection ${newStatus ? 'Enabled' : 'Disabled'}**
 
@@ -208,9 +214,10 @@ ${newStatus ?
             if (text.includes('auto') && text.includes('slippage')) {
                 const enable = text.includes('enable') || text.includes('turn on') || text.includes('set');
                 
-                // Save auto slippage setting if enabling
+                // 🔄 Save auto slippage to BOTH wallet and session
                 if (enable) {
                     await walletService.updateWalletSettings(platformUser, activeWallet.id, { autoSlippage: true });
+                    await sessionService.updateSettings(platformUser, { autoSlippage: true });
                 }
                 
                 const responseText = `🤖 **Auto Slippage ${enable ? 'Enabled' : 'Status'}**

@@ -112,7 +112,7 @@ const removeLiquidityAction: Action = {
 🎯 **Removal Options:**
 ${parsed.percentage ? `• Remove ${parsed.percentage}% of position` : '• Remove 100% (full position)'}
 • Collect unclaimed fees: ~$${(parseFloat(feeEarnings.totalEarned.usd) * 0.1).toFixed(2)} estimated
-• Expected to receive: ${ethers.formatUnits(position.depositedToken0, position.pool.token0.decimals)} ${token0} + ${ethers.formatUnits(position.depositedToken1, position.pool.token1.decimals)} ${token1}
+• Expected to receive: ${ethers.utils.formatUnits(position.depositedToken0, position.pool.token0.decimals)} ${token0} + ${ethers.utils.formatUnits(position.depositedToken1, position.pool.token1.decimals)} ${token1}
 
 ⚠️ **Important Notes:**
 • Removing liquidity will stop earning fees

@@ -1,5 +1,7 @@
 import { elizaLogger } from '@elizaos/core';
 import { cleanupManager } from '../utils/cleanupManager.js';
+import { WalletService } from './walletService.js';
+import { IExtendedRuntime } from '../types/extended.js';
 
 export interface PlatformUser {
     platform: 'telegram' | 'discord' | 'web' | 'api';
@@ -23,11 +25,12 @@ export interface GlobalSettings {
 
 export interface PendingTransaction {
     id: string;
-    type: 'swap' | 'addLiquidity' | 'removeLiquidity';
+    type: 'swap' | 'addLiquidity' | 'removeLiquidity' | 'wrap' | 'unwrap';
     fromToken: string;
     toToken: string;
     amount: string;
-    quote: any;
+    quote?: any; // Optional for wrap/unwrap operations
+    wrapQuote?: any; // For wrap/unwrap operations
     timestamp: number;
     expires: number;
     platformUser: PlatformUser;
@@ -75,7 +78,7 @@ export class SessionService {
     private createDefaultSettings(): GlobalSettings {
         return {
             slippagePercentage: 0.5,
-            mevProtection: true,
+            mevProtection: false, // 🔧 DISABLED: 9X API doesn't support MEV protection
             autoSlippage: false,
             transactionDeadline: 20,
             preferredGasPrice: 'standard',
@@ -90,7 +93,7 @@ export class SessionService {
     /**
      * Get or create user session
      */
-    public getSession(platformUser: PlatformUser): UserSession {
+    public async getSession(platformUser: PlatformUser, runtime?: IExtendedRuntime): Promise<UserSession> {
         const userKey = this.createUserKey(platformUser);
         
         if (!this.sessions.has(userKey)) {
@@ -101,6 +104,38 @@ export class SessionService {
                 pendingTransactions: new Map(),
                 lastActivity: Date.now()
             };
+            
+            // 🔄 SYNC SETTINGS FROM WALLET: If user has a wallet, load their persisted settings
+            if (runtime) {
+                try {
+                    const walletService = new WalletService(runtime);
+                    const activeWallet = await walletService.getActiveWallet(platformUser);
+                    
+                    if (activeWallet && activeWallet.settings) {
+                        // Merge wallet settings into session settings
+                        session.settings = {
+                            ...session.settings,
+                            slippagePercentage: activeWallet.settings.slippagePercentage ?? session.settings.slippagePercentage,
+                            mevProtection: activeWallet.settings.mevProtection ?? session.settings.mevProtection,
+                            autoSlippage: activeWallet.settings.autoSlippage ?? session.settings.autoSlippage,
+                            transactionDeadline: activeWallet.settings.transactionDeadline ?? session.settings.transactionDeadline,
+                            preferredGasPrice: activeWallet.settings.preferredGasPrice ?? session.settings.preferredGasPrice,
+                            notifications: {
+                                ...session.settings.notifications,
+                                ...activeWallet.settings.notifications
+                            }
+                        };
+                        
+                        session.hasWallet = true;
+                        session.activeWalletId = activeWallet.id;
+                        
+                        elizaLogger.info(`🔄 Synced settings from wallet ${activeWallet.id} for ${platformUser.platform}:${platformUser.platformUserId} - slippage: ${session.settings.slippagePercentage}%`);
+                    }
+                } catch (error) {
+                    // Don't fail session creation if wallet sync fails
+                    elizaLogger.warn(`⚠️ Could not sync wallet settings for ${platformUser.platform}:${platformUser.platformUserId}:`, error);
+                }
+            }
             
             this.sessions.set(userKey, session);
             elizaLogger.info(`👤 Created new session for ${platformUser.platform} user ${platformUser.platformUserId}`);
@@ -114,8 +149,8 @@ export class SessionService {
     /**
      * Update session when user creates/switches wallet
      */
-    public updateWalletStatus(platformUser: PlatformUser, hasWallet: boolean, activeWalletId?: string): void {
-        const session = this.getSession(platformUser);
+    public async updateWalletStatus(platformUser: PlatformUser, hasWallet: boolean, activeWalletId?: string): Promise<void> {
+        const session = await this.getSession(platformUser);
         session.hasWallet = hasWallet;
         session.activeWalletId = activeWalletId;
         
@@ -125,24 +160,24 @@ export class SessionService {
     /**
      * Check if user has a wallet
      */
-    public hasWallet(platformUser: PlatformUser): boolean {
-        const session = this.getSession(platformUser);
+    public async hasWallet(platformUser: PlatformUser): Promise<boolean> {
+        const session = await this.getSession(platformUser);
         return session.hasWallet;
     }
 
     /**
      * Get user's global settings
      */
-    public getSettings(platformUser: PlatformUser): GlobalSettings {
-        const session = this.getSession(platformUser);
+    public async getSettings(platformUser: PlatformUser): Promise<GlobalSettings> {
+        const session = await this.getSession(platformUser);
         return { ...session.settings }; // Return copy to prevent mutation
     }
 
     /**
      * Update user's global settings
      */
-    public updateSettings(platformUser: PlatformUser, settings: Partial<GlobalSettings>): void {
-        const session = this.getSession(platformUser);
+    public async updateSettings(platformUser: PlatformUser, settings: Partial<GlobalSettings>): Promise<void> {
+        const session = await this.getSession(platformUser);
         session.settings = { ...session.settings, ...settings };
         
         elizaLogger.info(`⚙️ Updated settings for ${platformUser.platform}:${platformUser.platformUserId}`);
@@ -152,12 +187,12 @@ export class SessionService {
      * Create a pending transaction that requires confirmation
      * EDGE CASE FIX: Only allow 1 pending transaction per user
      */
-    public createPendingTransaction(
+    public async createPendingTransaction(
         platformUser: PlatformUser,
         type: PendingTransaction['type'],
         data: Omit<PendingTransaction, 'id' | 'timestamp' | 'expires' | 'platformUser'>
-    ): string {
-        const session = this.getSession(platformUser);
+    ): Promise<string> {
+        const session = await this.getSession(platformUser);
         const transactionId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const now = Date.now();
         
@@ -174,9 +209,25 @@ export class SessionService {
             timestamp: now,
             expires: now + (5 * 60 * 1000), // 5 minutes
             platformUser,
-            ...data
+            fromToken: data.fromToken,
+            toToken: data.toToken,
+            amount: data.amount,
+            quote: data.quote ? JSON.parse(JSON.stringify(data.quote)) : undefined, // Deep clone quote
+            wrapQuote: data.wrapQuote ? JSON.parse(JSON.stringify(data.wrapQuote)) : undefined, // Deep clone wrapQuote
+            chatId: data.chatId
         };
 
+        // 🔧 DEBUG: Log transaction storage details
+        console.log('💾 SessionService storing transaction:', {
+            transactionId,
+            type,
+            hasQuote: !!pendingTx.quote,
+            quoteKeys: pendingTx.quote ? Object.keys(pendingTx.quote) : 'NO QUOTE',
+            quoteDataExists: !!pendingTx.quote?.data,
+            quoteDataLength: pendingTx.quote?.data?.length || 0,
+            quoteToExists: !!pendingTx.quote?.to
+        });
+        
         session.pendingTransactions.set(transactionId, pendingTx);
         
         elizaLogger.info(`⏳ Created pending ${type} transaction ${transactionId} for user ${platformUser.platform}:${platformUser.platformUserId}`);
@@ -187,8 +238,8 @@ export class SessionService {
      * Get a pending transaction by ID
      * EDGE CASE FIX: Better expiry handling with user feedback
      */
-    public getPendingTransaction(platformUser: PlatformUser, transactionId: string): PendingTransaction | null {
-        const session = this.getSession(platformUser);
+    public async getPendingTransaction(platformUser: PlatformUser, transactionId: string): Promise<PendingTransaction | null> {
+        const session = await this.getSession(platformUser);
         const tx = session.pendingTransactions.get(transactionId);
         
         if (!tx) {
@@ -208,8 +259,8 @@ export class SessionService {
     /**
      * Get most recent pending transaction (for handling ambiguous confirmations)
      */
-    public getMostRecentPendingTransaction(platformUser: PlatformUser): PendingTransaction | null {
-        const pendingTxs = this.getPendingTransactions(platformUser);
+    public async getMostRecentPendingTransaction(platformUser: PlatformUser): Promise<PendingTransaction | null> {
+        const pendingTxs = await this.getPendingTransactions(platformUser);
         if (pendingTxs.length === 0) {
             return null;
         }
@@ -266,8 +317,8 @@ Reply "yes" to confirm or "no" to cancel.`;
     /**
      * Confirm and remove a pending transaction
      */
-    public confirmTransaction(platformUser: PlatformUser, transactionId: string): PendingTransaction | null {
-        const session = this.getSession(platformUser);
+    public async confirmTransaction(platformUser: PlatformUser, transactionId: string): Promise<PendingTransaction | null> {
+        const session = await this.getSession(platformUser);
         const tx = session.pendingTransactions.get(transactionId);
         
         if (!tx || Date.now() > tx.expires) {
@@ -276,6 +327,19 @@ Reply "yes" to confirm or "no" to cancel.`;
         }
 
         session.pendingTransactions.delete(transactionId);
+        
+        // 🔧 DEBUG: Log transaction retrieval details
+        console.log('📤 SessionService retrieving transaction:', {
+            transactionId,
+            type: tx.type,
+            hasQuote: !!tx.quote,
+            quoteKeys: tx.quote ? Object.keys(tx.quote) : 'NO QUOTE',
+            quoteDataExists: !!tx.quote?.data,
+            quoteDataLength: tx.quote?.data?.length || 0,
+            quoteToExists: !!tx.quote?.to,
+            quoteDataValue: tx.quote?.data ? `${tx.quote.data.substring(0, 20)}...` : 'NO DATA'
+        });
+        
         elizaLogger.info(`✅ Confirmed transaction ${transactionId} for user ${platformUser.platform}:${platformUser.platformUserId}`);
         return tx;
     }
@@ -283,8 +347,8 @@ Reply "yes" to confirm or "no" to cancel.`;
     /**
      * Cancel a pending transaction
      */
-    public cancelTransaction(platformUser: PlatformUser, transactionId: string): boolean {
-        const session = this.getSession(platformUser);
+    public async cancelTransaction(platformUser: PlatformUser, transactionId: string): Promise<boolean> {
+        const session = await this.getSession(platformUser);
         const deleted = session.pendingTransactions.delete(transactionId);
         
         if (deleted) {
@@ -297,8 +361,8 @@ Reply "yes" to confirm or "no" to cancel.`;
     /**
      * Get all pending transactions for a user
      */
-    public getPendingTransactions(platformUser: PlatformUser): PendingTransaction[] {
-        const session = this.getSession(platformUser);
+    public async getPendingTransactions(platformUser: PlatformUser): Promise<PendingTransaction[]> {
+        const session = await this.getSession(platformUser);
         const now = Date.now();
         const validTransactions: PendingTransaction[] = [];
 

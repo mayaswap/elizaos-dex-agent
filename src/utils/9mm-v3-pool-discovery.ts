@@ -94,10 +94,17 @@ export class NineMmPoolDiscoveryService {
     `;
 
     try {
-      const result = await this.client.request<{ pools: V3Pool[] }>(query, {
+      // Add timeout protection
+      const timeoutPromise = new Promise<{ pools: V3Pool[] }>((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+      
+      const requestPromise = this.client.request<{ pools: V3Pool[] }>(query, {
         token0,
         token1
       });
+      
+      const result = await Promise.race([requestPromise, timeoutPromise]);
       return result.pools;
     } catch (error) {
       console.error('Error fetching pools:', error);

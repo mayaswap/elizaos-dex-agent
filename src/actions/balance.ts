@@ -130,14 +130,14 @@ I need a wallet to check balances.
             }
             
             // Initialize provider for PulseChain (main network for this demo)
-            const provider = new ethers.JsonRpcProvider(CHAIN_CONFIGS.pulsechain.rpcUrl);
+            const provider = new ethers.providers.JsonRpcProvider(CHAIN_CONFIGS.pulsechain.rpcUrl);
             
             try {
                 console.log(`🌐 Checking balance for wallet: ${walletAddress}`);
                 
                 // Get native token balance (PLS)
                 const nativeBalance = await provider.getBalance(walletAddress);
-                const plsBalance = ethers.formatEther(nativeBalance);
+                const plsBalance = ethers.utils.formatEther(nativeBalance);
                 
                 console.log(`💰 PLS Balance: ${plsBalance}`);
                 
@@ -171,7 +171,7 @@ ${walletAddress}
                                 // Use different decimals for different tokens
                                 const decimals = tokenSymbol === 'USDC' || tokenSymbol === 'USDT' ? 6 : 
                                                 tokenSymbol === 'HEX' ? 8 : 18;
-                                formattedBalance = ethers.formatUnits(balance, decimals);
+                                formattedBalance = ethers.utils.formatUnits(balance, decimals);
                             }
                             
                             responseText += `\n• **${tokenSymbol}:** ${parseFloat(formattedBalance).toFixed(4)} ${tokenSymbol}`;

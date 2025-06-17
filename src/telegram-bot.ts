@@ -397,9 +397,9 @@ Need help? Type /help for all commands! 🚀`;
                         
                         // Fetch real balance
                         try {
-                            const provider = new ethers.JsonRpcProvider('https://rpc.pulsechain.com');
+                            const provider = new ethers.providers.JsonRpcProvider('https://rpc.pulsechain.com');
                             const balance = await provider.getBalance(wallet.address);
-                            const plsBalance = ethers.formatEther(balance);
+                            const plsBalance = ethers.utils.formatEther(balance);
                             walletList += `   💰 Balance: ${parseFloat(plsBalance).toFixed(4)} PLS\n`;
                         } catch {
                             walletList += `   💰 Balance: Loading...\n`;
@@ -1081,12 +1081,12 @@ Once you have a wallet, I can show you balances for PLS, HEX, USDC, and more! �
             }
 
             // Initialize provider for PulseChain
-            const provider = new ethers.JsonRpcProvider('https://rpc.pulsechain.com');
+            const provider = new ethers.providers.JsonRpcProvider('https://rpc.pulsechain.com');
             
             try {
                 // Get native token balance (PLS)
                 const nativeBalance = await provider.getBalance(activeWallet.address);
-                const plsBalance = ethers.formatEther(nativeBalance);
+                const plsBalance = ethers.utils.formatEther(nativeBalance);
                 
                 let response = `💰 **Your Wallet Balance**\n\n`;
                 response += `🔐 **Active Wallet:** ${activeWallet.name}\n`;
@@ -1108,7 +1108,7 @@ Once you have a wallet, I can show you balances for PLS, HEX, USDC, and more! �
                         const balance = await contract.balanceOf!(activeWallet.address);
                         
                         if (balance > 0n) {
-                            const formattedBalance = ethers.formatUnits(balance, token.decimals);
+                            const formattedBalance = ethers.utils.formatUnits(balance, token.decimals);
                             response += `• **${token.symbol}:** ${parseFloat(formattedBalance).toFixed(4)} ${token.symbol}\n`;
                         } else {
                             response += `• **${token.symbol}:** 0.0000 ${token.symbol}\n`;

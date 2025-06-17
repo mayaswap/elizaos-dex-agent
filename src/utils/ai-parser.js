@@ -81,9 +81,24 @@ var AIParser = /** @class */ (function () {
             return __generator(this, function (_f) {
                 switch (_f.label) {
                     case 0:
-                        if (!this.isEnabled) {
+                                                        if (!this.isEnabled) {
                             console.log('🔧 AI parser disabled - API key not found');
                             throw new Error('AI parser not enabled - API key missing');
+                        }
+                        
+                        // Fast-track simple confirmations to avoid AI processing delays
+                        var trimmedInput = input.trim().toLowerCase();
+                        var simpleConfirmations = ['yes', 'no', 'confirm', 'cancel', 'ok', 'sure', 'nope', 'yeah', 'yep'];
+                        if (simpleConfirmations.includes(trimmedInput)) {
+                            console.log('🔧 Fast-tracking simple confirmation to avoid AI delays');
+                            return [2 /*return*/, {
+                                intent: 'general_conversation',
+                                confidence: 0.05, // Very low to skip retries
+                                rawInput: input,
+                                fromToken: undefined,
+                                toToken: undefined,
+                                amount: undefined
+                            }];
                         }
                         _f.label = 1;
                     case 1:

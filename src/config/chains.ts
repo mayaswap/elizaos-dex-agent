@@ -10,7 +10,7 @@ export const CHAIN_CONFIGS: Record<SupportedChain, ChainConfig> = {
     name: 'PulseChain',
     symbol: 'PLS',
     rpcUrl: 'https://rpc.pulsechain.com',
-    explorerUrl: 'https://scan.pulsechain.com',
+    explorerUrl: 'https://kekxplorer.avecdra.pro',
     wrappedToken: '0xA1077a294dDE1B09bB078844df40758a5D0f9a27', // WPLS
     aggregatorBaseUrl: 'https://api.9mm.pro',
   },
@@ -35,24 +35,52 @@ export const CHAIN_CONFIGS: Record<SupportedChain, ChainConfig> = {
 };
 
 /**
- * 9mm DEX Contract Addresses on Pulsechain
- * From our established configuration in pulsechain-config.json
+ * 9MM Company Contract Addresses on Pulsechain
+ * 
+ * 9X Aggregator routes across these DEX sources for best prices:
+ * - 9MM V2/V3 (their own DEXs - PancakeSwap forks)
+ * - PulseX V1/V2, Uniswap V2/V3, PancakeSwap V2/V3
+ * - SushiSwap, Balancer V2, Curve, ShibaSwap, EasySwap
+ * - CryptoCom, Dextop, NineInch V2/V3, MultiHop
  */
 export const NINMM_CONTRACTS = {
   pulsechain: {
-    // V2 Contracts
-    v2Factory: '0x3a0Fa7884dD93f3cd234bBE2A0958Ef04b05E13b',
-    v2Router: '0xcC73b59F8D7b7c532703bDfea2808a28a488cF47',
+    // 9X Aggregator System (Routes across all DEXs below)
+    aggregatorRouter: '0x4491dbefc128e2de184baba03e7c991356f733ce', // 9X aggregator proxy
+    routerHub: '0x9b35124b7212be7145985bc6b95e4a8a2ef825c9', // Core routing hub
+    routerImplementation: '0x8ffebe284f6c829aab9981656637db3aec637c4c', // Main implementation
     
-    // V3 Contracts
-    v3Factory: '0xe50DbDC88E87a2C92984d794bcF3D1d76f619C68',
-    v3SmartRouter: '0xa9444246d80d6E3496C9242395213B4f22226a59',
-    v3QuoterV2: '0x500260dD7C27eCE20b89ea0808d05a13CF867279',
-    v3NonfungiblePositionManager: '0xCC05bf158202b4F461Ede8843d76dcd7Bbad07f2',
+    // 9MM DEX V2 Contracts (PancakeSwap V2 fork)
+    nineMM_V2_Factory: '0x3a0Fa7884dD93f3cd234bBE2A0958Ef04b05E13b',
+    nineMM_V2_Router: '0xcC73b59F8D7b7c532703bDfea2808a28a488cF47',
+    
+    // 9MM DEX V3 Contracts (PancakeSwap V3 fork)
+    nineMM_V3_Factory: '0xe50DbDC88E87a2C92984d794bcF3D1d76f619C68',
+    nineMM_V3_PoolDeployer: '0x00f37661fA1b2B8A530cfb7B6d5A5a6AEd74177b',
+    nineMM_V3_SwapRouter: '0x7bE8fbe502191bBBCb38b02f2d4fA0D628301bEA',
+    nineMM_V3_PositionManager: '0xCC05bf158202b4F461Ede8843d76dcd7Bbad07f2',
+    nineMM_V3_Quoter: '0x500260dD7C27eCE20b89ea0808d05a13CF867279',
+    nineMM_V3_QuoterV2: '0x500260dD7C27eCE20b89ea0808d05a13CF867279',
+    nineMM_V3_TickLens: '0x9f6d34fCC7cB8f98dfC0A5CB414f6539B414d26a',
+    nineMM_V3_NftDescriptor: '0xfc6D8b33211c1ACe98d34b3b4b0DF35F4E3186d1',
+    nineMM_V3_Migrator: '0xdee0BDC4cc82872f7D35941aBFA872F744FdF064',
+    nineMM_V3_MasterChef: '0x842f3eD1C390637C99F82833D01D37695BF22066',
+    nineMM_V3_LmPoolDeployer: '0xa887a9F1A0Ebc94bBB1C868bD32189d078d5eeCf',
+    
+    // Smart Router System (Routes across V2/V3)
+    smartRouter: '0xa9444246d80d6E3496C9242395213B4f22226a59',
+    smartRouterHelper: '0xb7ef0a4d0EC7DEE58a7762EfB707ed0a646E92A9',
+    mixedRouteQuoter: '0xBa53762F281A293B6bE73C9D2d3b740C433635cA',
+    tokenValidator: '0x623942Bb33b72f02061324A74C4718bC4b9366a1',
+    
+    // External DEX Routers (aggregated by 9X)
+    pulseXV1Router: '0x165c3410fc91ef562c50559f7d2289febed552d9', // From trace analysis
+    pulseXV2Router: '0x165c3410fc91ef562c50559f7d2289febed552d9', // From trace analysis
     
     // Multicall & Utils
     multicall3: '0x4c3781eaA6cCe2EA1EC0A8b3cF4d2e6a29e95b14',
-    universalRouter: '0x3C5Fd0000EdDAc70d3A69f9648f7D1f9f1C4D97b',
+    interfaceMulticall: '0xC8edb20cA86A0c6B3dbd38A1D47579C625a23dF4',
+    universalRouter: '0x4491dbefc128e2de184baba03e7c991356f733ce', // Alias for aggregator
   },
 };
 

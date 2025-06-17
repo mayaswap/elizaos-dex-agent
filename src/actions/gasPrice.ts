@@ -85,12 +85,12 @@ const gasPriceAction: Action = {
             for (const chainKey of chainsToCheck) {
                 const config = chainConfigs[chainKey as keyof typeof chainConfigs];
                 try {
-                    const provider = new ethers.JsonRpcProvider(config.rpc);
+                    const provider = new ethers.providers.JsonRpcProvider(config.rpc);
                     const feeData = await provider.getFeeData();
                     
-                    const gasPrice = feeData.gasPrice ? Number(ethers.formatUnits(feeData.gasPrice, 'gwei')) : 0;
-                    const maxFeePerGas = feeData.maxFeePerGas ? Number(ethers.formatUnits(feeData.maxFeePerGas, 'gwei')) : 0;
-                    const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? Number(ethers.formatUnits(feeData.maxPriorityFeePerGas, 'gwei')) : 0;
+                    const gasPrice = feeData.gasPrice ? Number(ethers.utils.formatUnits(feeData.gasPrice, 'gwei')) : 0;
+                    const maxFeePerGas = feeData.maxFeePerGas ? Number(ethers.utils.formatUnits(feeData.maxFeePerGas, 'gwei')) : 0;
+                    const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ? Number(ethers.utils.formatUnits(feeData.maxPriorityFeePerGas, 'gwei')) : 0;
 
                     // Estimate transaction costs for common operations
                     const swapGasLimit = 200000; // Typical DEX swap

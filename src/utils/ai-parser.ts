@@ -50,14 +50,30 @@ export class AIParser {
             throw new Error('AI parser not enabled - API key missing');
         }
 
+        // Fast-track simple confirmations to avoid AI processing delays
+        const trimmedInput = input.trim().toLowerCase();
+        const simpleConfirmations = ['yes', 'no', 'confirm', 'cancel', 'ok', 'sure', 'nope', 'yeah', 'yep'];
+        if (simpleConfirmations.includes(trimmedInput)) {
+            console.log('🔧 Fast-tracking simple confirmation to avoid AI delays');
+            return {
+                intent: 'general_conversation',
+                confidence: 0.05, // Very low to skip retries
+                rawInput: input,
+                fromToken: undefined,
+                toToken: undefined,
+                amount: undefined
+            };
+        }
+
         try {
             const systemPrompt = `You are an expert at parsing natural language commands for a DEX (Decentralized Exchange) trading interface.
 
 Your job is to analyze user input and determine if it's:
 1. A STRUCTURED COMMAND - specific trading/wallet actions that need parameters
-2. GENERAL CONVERSATION - greetings, questions, casual chat
+2. TRANSACTION CONFIRMATION - simple yes/no responses to pending transactions
+3. GENERAL CONVERSATION - greetings, questions, casual chat
 
-ONLY structured commands should be parsed. General conversation should be identified as such.
+IMPORTANT: Simple confirmations like "yes", "no", "confirm", "cancel" should be treated as GENERAL CONVERSATION so the fuzzy matcher can handle them properly.
 
 Available Structured Command Intents:
 - swap: Exchange one token for another (needs tokens/amounts)
@@ -108,6 +124,9 @@ For GENERAL CONVERSATION:
 
 Examples:
 Input: "hi" → {"intent": "general_conversation", "fromToken": null, "toToken": null, "amount": null, "confidence": 0.95, "rawInput": "hi", "reasoning": "This is a greeting"}
+Input: "yes" → {"intent": "general_conversation", "fromToken": null, "toToken": null, "amount": null, "confidence": 0.95, "rawInput": "yes", "reasoning": "Simple confirmation - let fuzzy matcher handle it"}
+Input: "no" → {"intent": "general_conversation", "fromToken": null, "toToken": null, "amount": null, "confidence": 0.95, "rawInput": "no", "reasoning": "Simple confirmation - let fuzzy matcher handle it"}
+Input: "confirm" → {"intent": "general_conversation", "fromToken": null, "toToken": null, "amount": null, "confidence": 0.95, "rawInput": "confirm", "reasoning": "Simple confirmation - let fuzzy matcher handle it"}
 Input: "price of PLS" → {"intent": "price", "fromToken": "PLS", "toToken": null, "amount": null, "confidence": 0.95, "rawInput": "price of PLS", "reasoning": "Price query for PLS token"}
 Input: "swap 100 usdc for pls" → {"intent": "swap", "fromToken": "USDC", "toToken": "PLS", "amount": "100", "confidence": 0.95, "rawInput": "swap 100 usdc for pls", "reasoning": "Clear swap command with parameters"}
 Input: "how are you?" → {"intent": "general_conversation", "fromToken": null, "toToken": null, "amount": null, "confidence": 0.95, "rawInput": "how are you?", "reasoning": "General question/conversation"}`;

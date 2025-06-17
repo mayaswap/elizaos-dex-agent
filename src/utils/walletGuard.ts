@@ -44,7 +44,7 @@ export class WalletGuard {
         }
 
         // Check session first (fast in-memory check)
-        const hasWalletInSession = sessionService.hasWallet(platformUser);
+        const hasWalletInSession = await sessionService.hasWallet(platformUser);
         
         if (hasWalletInSession) {
             return { hasWallet: true, platformUser };
@@ -58,7 +58,7 @@ export class WalletGuard {
             // Update session with current wallet status
             if (hasWallet) {
                 const activeWallet = wallets.find(w => w.isActive) || wallets[0];
-                sessionService.updateWalletStatus(platformUser, true, activeWallet!.id);
+                await sessionService.updateWalletStatus(platformUser, true, activeWallet!.id);
             }
 
             return { hasWallet, platformUser };
@@ -100,7 +100,7 @@ export class WalletGuard {
         }
 
         // Get active wallet ID
-        const session = sessionService.getSession(platformUser);
+        const session = await sessionService.getSession(platformUser);
         const activeWalletId = session.activeWalletId;
 
         if (!activeWalletId) {

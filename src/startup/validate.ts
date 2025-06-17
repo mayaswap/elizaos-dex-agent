@@ -20,7 +20,7 @@ export async function runStartupValidation(): Promise<boolean> {
         // 2. Check RPC connection
         logInfo('Checking RPC connection...');
         try {
-            const provider = new ethers.JsonRpcProvider(config.RPC_URL);
+            const provider = new ethers.providers.JsonRpcProvider(config.RPC_URL);
             const blockNumber = await provider.getBlockNumber();
             logInfo(`✅ RPC connection successful - Block: ${blockNumber}`);
         } catch (error) {

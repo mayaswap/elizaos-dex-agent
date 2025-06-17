@@ -2,6 +2,35 @@ import { GraphQLClient, gql } from 'graphql-request';
 import { ethers } from 'ethers';
 import { NineMmV3FeeTracker } from './9mm-v3-fee-tracker.js';
 
+// V3 Position Manager ABI - only the functions we need
+const V3_POSITION_MANAGER_ABI = [
+  // Mint new position
+  "function mint((address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min, address recipient, uint256 deadline)) external payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)",
+  // Increase liquidity for existing position
+  "function increaseLiquidity((uint256 tokenId, uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min, uint256 deadline)) external payable returns (uint128 liquidity, uint256 amount0, uint256 amount1)",
+  // Collect fees
+  "function collect((uint256 tokenId, address recipient, uint128 amount0Max, uint128 amount1Max)) external payable returns (uint256 amount0, uint256 amount1)",
+  // Remove liquidity
+  "function decreaseLiquidity((uint256 tokenId, uint128 liquidity, uint256 amount0Min, uint256 amount1Min, uint256 deadline)) external payable returns (uint256 amount0, uint256 amount1)",
+  // Get position details
+  "function positions(uint256 tokenId) external view returns (uint96 nonce, address operator, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, uint128 tokensOwed0, uint128 tokensOwed1)"
+];
+
+// V3 Pool ABI for getting current state
+const V3_POOL_ABI = [
+  "function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)",
+  "function token0() external view returns (address)",
+  "function token1() external view returns (address)",
+  "function fee() external view returns (uint24)",
+  "function liquidity() external view returns (uint128)",
+  "function tickSpacing() external view returns (int24)"
+];
+
+// V3 Factory ABI
+const V3_FACTORY_ABI = [
+  "function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool)"
+];
+
 export interface V3Position {
   id: string;
   owner: string;
@@ -58,6 +87,20 @@ export interface AddLiquidityV3Params {
   deadline: number;
 }
 
+export interface MintPositionParams {
+  token0: string;
+  token1: string;
+  fee: number;
+  tickLower: number;
+  tickUpper: number;
+  amount0Desired: string;
+  amount1Desired: string;
+  amount0Min: string;
+  amount1Min: string;
+  recipient: string;
+  deadline: number;
+}
+
 export interface RemovalResult {
   token0Amount: string;
   token1Amount: string;
@@ -70,13 +113,15 @@ export class NineMmV3PositionManager {
   private feeTracker: NineMmV3FeeTracker;
   private subgraphUrl = 'https://graph.9mm.pro/subgraphs/name/pulsechain/9mm-v3-latest';
   
-  // 9mm V3 contract addresses on PulseChain
-  private nftPositionManager = '0x01CEF6B55a31B8fE39F951bc67b41D5DA6F96B1D'; // Example address
-  private factory = '0x0e410Fa377115581470D00248f4401E6C8B02171'; // Example address
+  // 9mm V3 contract addresses on PulseChain - Updated with actual addresses
+  private nftPositionManager = '0xCC05bf158202b4F461Ede8843d76dcd7Bbad07f2'; // Actual 9mm V3 Position Manager
+  private factory = '0xe50DbDC88E87a2C92984d794bcF3D1d76f619C68'; // Actual 9mm V3 Factory
+  private provider: ethers.providers.JsonRpcProvider;
   
   constructor() {
     this.client = new GraphQLClient(this.subgraphUrl);
     this.feeTracker = new NineMmV3FeeTracker();
+    this.provider = new ethers.providers.JsonRpcProvider('https://rpc.pulsechain.com');
   }
 
   /**
@@ -359,9 +404,9 @@ export class NineMmV3PositionManager {
     const rangeStatus = inRange ? '🟢 In Range' : '🔴 Out of Range';
     const unclaimedFees = this.calculateUnclaimedFees(position);
     
-    const liquidity = ethers.formatUnits(position.liquidity, 18);
-    const value0 = ethers.formatUnits(position.depositedToken0, position.pool.token0.decimals);
-    const value1 = ethers.formatUnits(position.depositedToken1, position.pool.token1.decimals);
+    const liquidity = ethers.utils.formatUnits(position.liquidity, 18);
+    const value0 = ethers.utils.formatUnits(position.depositedToken0, position.pool.token0.decimals);
+    const value1 = ethers.utils.formatUnits(position.depositedToken1, position.pool.token1.decimals);
     
     return `${index}. **${token0}/${token1} ${feeTier}** - ${rangeStatus}
    Position ID: #${position.id.slice(0, 8)}...
@@ -488,5 +533,239 @@ export class NineMmV3PositionManager {
       '20000': '2%'
     };
     return tierMap[feeTier] || `${parseInt(feeTier) / 10000}%`;
+  }
+
+  /**
+   * Get pool information from factory
+   */
+  async getPoolInfo(token0: string, token1: string, fee: number): Promise<{
+    poolAddress: string;
+    currentTick: number;
+    sqrtPriceX96: string;
+    liquidity: string;
+  } | null> {
+    try {
+      const factoryContract = new ethers.Contract(this.factory, V3_FACTORY_ABI, this.provider);
+      const poolAddress = await factoryContract.getPool(token0, token1, fee);
+      
+      if (poolAddress === ethers.constants.AddressZero) {
+        return null;
+      }
+
+      const poolContract = new ethers.Contract(poolAddress, V3_POOL_ABI, this.provider);
+      const slot0 = await poolContract.slot0();
+      const liquidity = await poolContract.liquidity();
+
+      return {
+        poolAddress,
+        currentTick: slot0.tick,
+        sqrtPriceX96: slot0.sqrtPriceX96.toString(),
+        liquidity: liquidity.toString()
+      };
+    } catch (error) {
+      console.error('Error getting pool info:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate optimal amounts for liquidity based on current price and range
+   */
+  calculateOptimalAmounts(
+    amount0Desired: string,
+    amount1Desired: string,
+    currentTick: number,
+    tickLower: number,
+    tickUpper: number,
+    token0Decimals: number,
+    token1Decimals: number
+  ): { amount0: string; amount1: string } {
+    // This is a simplified calculation
+    // In production, you'd use more complex math based on the concentrated liquidity formula
+    
+    // If current price is within range
+    if (currentTick >= tickLower && currentTick <= tickUpper) {
+      // Use provided amounts with some adjustment
+      return {
+        amount0: amount0Desired,
+        amount1: amount1Desired
+      };
+    }
+    
+    // If current price is below range, only need token0
+    if (currentTick < tickLower) {
+      return {
+        amount0: amount0Desired,
+        amount1: "0"
+      };
+    }
+    
+    // If current price is above range, only need token1
+    return {
+      amount0: "0",
+      amount1: amount1Desired
+    };
+  }
+
+  /**
+   * Execute mint transaction to create new position
+   */
+  async mintNewPosition(
+    params: MintPositionParams,
+    privateKey: string
+  ): Promise<{
+    success: boolean;
+    tokenId?: string;
+    liquidity?: string;
+    amount0?: string;
+    amount1?: string;
+    transactionHash?: string;
+    error?: string;
+  }> {
+    try {
+      // Create wallet instance
+      const wallet = new ethers.Wallet(privateKey, this.provider);
+      
+      // Create position manager contract instance
+      const positionManager = new ethers.Contract(
+        this.nftPositionManager,
+        V3_POSITION_MANAGER_ABI,
+        wallet
+      );
+
+      // Prepare mint parameters
+      const mintParams = {
+        token0: params.token0,
+        token1: params.token1,
+        fee: params.fee,
+        tickLower: params.tickLower,
+        tickUpper: params.tickUpper,
+        amount0Desired: params.amount0Desired,
+        amount1Desired: params.amount1Desired,
+        amount0Min: params.amount0Min,
+        amount1Min: params.amount1Min,
+        recipient: params.recipient,
+        deadline: params.deadline
+      };
+
+      console.log('🚀 Executing mint transaction:', {
+        ...mintParams,
+        amount0Desired: ethers.utils.formatUnits(params.amount0Desired, 18),
+        amount1Desired: ethers.utils.formatUnits(params.amount1Desired, 18)
+      });
+
+      // Estimate gas with buffer
+      const gasEstimate = await positionManager.estimateGas.mint(mintParams);
+      const gasLimit = gasEstimate.mul(120).div(100); // 20% buffer
+
+      // Execute mint transaction
+      const tx = await positionManager.mint(mintParams, {
+        gasLimit,
+        // Include value if one of the tokens is native (WPLS will be handled by router)
+        value: params.token0.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 
+          ? params.amount0Desired 
+          : params.token1.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+          ? params.amount1Desired
+          : 0
+      });
+
+      console.log(`⏳ Mint transaction sent: ${tx.hash}`);
+      
+      // Wait for confirmation
+      const receipt = await tx.wait();
+      
+      if (receipt.status === 1) {
+        // Parse the mint event to get return values
+        const mintEvent = receipt.events?.find(e => e.event === 'IncreaseLiquidity');
+        
+        console.log(`✅ Position minted successfully in block ${receipt.blockNumber}`);
+        
+        return {
+          success: true,
+          tokenId: mintEvent?.args?.tokenId?.toString() || 'Unknown',
+          liquidity: mintEvent?.args?.liquidity?.toString() || 'Unknown',
+          amount0: mintEvent?.args?.amount0?.toString() || params.amount0Desired,
+          amount1: mintEvent?.args?.amount1?.toString() || params.amount1Desired,
+          transactionHash: tx.hash
+        };
+      } else {
+        return {
+          success: false,
+          error: 'Transaction failed'
+        };
+      }
+
+    } catch (error) {
+      console.error('Mint position error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Build mint transaction for confirmation flow
+   */
+  async buildMintTransaction(
+    params: MintPositionParams
+  ): Promise<{
+    to: string;
+    data: string;
+    value: string;
+    gasEstimate: string;
+  }> {
+    const positionManager = new ethers.Contract(
+      this.nftPositionManager,
+      V3_POSITION_MANAGER_ABI,
+      this.provider
+    );
+
+    // Encode the mint function call
+    const data = positionManager.interface.encodeFunctionData('mint', [{
+      token0: params.token0,
+      token1: params.token1,
+      fee: params.fee,
+      tickLower: params.tickLower,
+      tickUpper: params.tickUpper,
+      amount0Desired: params.amount0Desired,
+      amount1Desired: params.amount1Desired,
+      amount0Min: params.amount0Min,
+      amount1Min: params.amount1Min,
+      recipient: params.recipient,
+      deadline: params.deadline
+    }]);
+
+    // Calculate value if native token is involved
+    const value = params.token0.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 
+      ? params.amount0Desired 
+      : params.token1.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+      ? params.amount1Desired
+      : "0";
+
+    // Estimate gas
+    try {
+      const gasEstimate = await this.provider.estimateGas({
+        to: this.nftPositionManager,
+        data,
+        value,
+        from: params.recipient
+      });
+      
+      return {
+        to: this.nftPositionManager,
+        data,
+        value,
+        gasEstimate: gasEstimate.mul(120).div(100).toString() // 20% buffer
+      };
+    } catch (error) {
+      // If estimation fails, use a reasonable default
+      return {
+        to: this.nftPositionManager,
+        data,
+        value,
+        gasEstimate: "500000" // Default gas limit
+      };
+    }
   }
 } 
